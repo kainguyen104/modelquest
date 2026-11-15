@@ -1,0 +1,17 @@
+{
+  "name": "modelquest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ModelQuest: a game for learning mathematical modeling and computational thinking",
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "node tests/run-all.js",
+    "test:one": "node tests/bt.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0",
+    "mammoth": "1.11.0",
+    "pdfjs-dist": "3.11.174",
+    "xlsx": "0.18.5"
+  }
+}

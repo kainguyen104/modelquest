@@ -1,0 +1,5 @@
+node_modules/
+shots/*
+!shots/.gitkeep
+.DS_Store
+__pycache__/
