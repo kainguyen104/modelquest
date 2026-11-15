@@ -2,7 +2,7 @@
 
 **Model. Code. Explore. Solve.** ModelQuest is a game for learning mathematical modeling and computational thinking. Students take a real situation, define its quantities, draw it as a stock-and-flow diagram, build it in Scratch-style blocks, write it as equations, test it, and use it to answer a real question.
 
-![Challenges page](docs/images/challenges.png)
+![Challenges page](images/challenges.png)
 
 ## Try it
 
@@ -24,11 +24,11 @@ Opened this way, the app runs in **local mode**: every mission works and progres
 
 | Diagram step | Build step |
 |---|---|
-| ![Diagram step](docs/images/diagram-step.png) | ![Build step](docs/images/build-step.png) |
+| ![Diagram step](images/diagram-step.png) | ![Build step](images/build-step.png) |
 
 **Teacher tools:** a live class dashboard, a problem editor, and AI help to draft new problems from a topic or an uploaded worksheet. Teacher-made problems run through the same seven steps, generated from the teacher's formulas.
 
-![Teacher dashboard](docs/images/teacher-dashboard.png)
+![Teacher dashboard](images/teacher-dashboard.png)
 
 ## Project structure
 
@@ -101,8 +101,8 @@ To run class features on your own hosting, replace the platform calls in `src/j7
 
 ## Docs
 
-- [Diagram step](docs/diagram-step.md)
-- [Equation step](docs/equation-step.md)
+- [Diagram step](images/diagram-step.md)
+- [Equation step](images/equation-step.md)
 
 ## Acknowledgements
 
