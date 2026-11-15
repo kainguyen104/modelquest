@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --omit=dev --omit=optional",
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist",
+  "functions": { "api/index.js": { "maxDuration": 120, "supportsCancellation": true } },
+  "rewrites": [
+    { "source": "/api/import-problem", "destination": "/api/index?mqroute=import" },
+    { "source": "/api/teacher-ai", "destination": "/api/index?mqroute=assistant" },
+    { "source": "/api/upload-ticket", "destination": "/api/index?mqroute=upload" },
+    { "source": "/healthz", "destination": "/api/index?mqroute=health" }
+  ],
+  "headers": [
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Content-Type-Options", "value": "nosniff" },
+      { "key": "Referrer-Policy", "value": "same-origin" }
+    ] }
+  ]
+}

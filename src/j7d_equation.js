@@ -46,11 +46,12 @@ function blockAst(n){if(n==null) return null;
 function blockFor(prog,key){let found=null; eachNode((prog&&prog.body)||[],n=>{if(n.type==="set"&&n.f.v===key) found=n}); return found?blockAst(found.a.x):null}
 
 /* ---------- checking a built equation ---------- */
-const TOK_OP={"+":"+","-":"−","*":"×","/":"÷","^":"^","(":"(",")":")","=":"="};
-const isNumTok=t=>/^-?[\d.]+$/.test(t);
-function tokHTML(t,SY){if(TOK_OP[t]) return `<span class="to">${TOK_OP[t]}</span>`; if(t==="ln(") return `<span class="to"><span class="mfn">ln</span>(</span>`;
+const TOK_OP={"+":"+","-":"−","*":"×","/":"÷","^":"^","(":"(",")":")","=":"=",",":","};
+const isNumTok=t=>/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(t);
+const isFnTok=t=>/^[a-z]+\($/.test(t);
+function tokHTML(t,SY){if(TOK_OP[t]) return `<span class="to">${TOK_OP[t]}</span>`; if(isFnTok(t)) return `<span class="to"><span class="mfn">${esc(t.slice(0,-1))}</span>(</span>`;
   if(isNumTok(t)) return `<span class="mn">${esc(t)}</span>`; return symHTML(t,SY)}
-const tokSrc=toks=>toks.map(t=>t==="ln("?"ln(":t).join(" ");
+const tokSrc=toks=>toks.join(" ");
 function eqSplit(toks){const i=toks.indexOf("="); if(i<0) return {err:"An equation needs an = sign: what it works out on one side, how on the other."};
   if(toks.indexOf("=",i+1)>=0) return {err:"Use just one = sign."};
   const L=toks.slice(0,i), R=toks.slice(i+1); if(!L.length||!R.length) return {err:"Put something on both sides of the = sign."};
@@ -118,8 +119,8 @@ function equationStep(el,m,st,ctx,spec){
 
   /* 2 · equations */
   const tilesFor=e=>e.tiles||spec.tiles;
-  const tileCls=t=>TOK_OP[t]||t==="ln("?"op":isNumTok(t)?"num":"sym";
-  const tileLab=t=>({"+":"plus","-":"minus","*":"times","/":"divided by","^":"to the power of","(":"open bracket",")":"close bracket","=":"equals","ln(":"natural log"})[t]||(isNumTok(t)?t:`symbol ${t}`);
+  const tileCls=t=>TOK_OP[t]||isFnTok(t)?"op":isNumTok(t)?"num":"sym";
+  const tileLab=t=>({"+":"plus","-":"minus","*":"times","/":"divided by","^":"to the power of","(":"open bracket",")":"close bracket","=":"equals",",":"comma","ln(":"natural log"})[t]||(isFnTok(t)?t.slice(0,-1):isNumTok(t)?t:`symbol ${t}`);
   function eqHints(e){const tgt=parseFormula(e.f), b=blockFor(prog,e.out), keys=[...formulaVars(tgt)], bOK=b&&(()=>{try{return equivalent(spec,b,tgt,[...new Set(keys.concat([...formulaVars(b)]))],false)}catch(err){return false}})();
     const h3=bOK?`Your blocks for ${symHTML(e.out,SY)} already say this:<span class="hline">${symHTML(e.out,SY)}<span class="mo mrel">=</span>${mathHTML(b,SY)}</span>Build the same thing with the tiles. Each Math block becomes its sign, a ÷ block can be a fraction, and a ^ block puts its right side up in the exponent.`:
       `The equation is:<span class="hline">${lineHTML(e.out+" = "+e.f,SY)}</span>Build it with the tiles, one symbol or sign at a time.`;
@@ -223,9 +224,18 @@ function autoEqSpec(p){const model=probModel(p), V=p.vars, by=k=>V.find(v=>v.key
   const one=u=>{u=String(u||"").trim(); return /^[a-z]{3,}s$/i.test(u)?u.slice(0,-1):u};
   const used=new Set(); outs.forEach(o=>{used.add(o.key); try{formulaVars(parseFormula(o.formula)).forEach(k=>used.add(k))}catch(e){}});
   const names=new Set(), syms=[...used].filter(k=>by(k)&&by(k).name&&!names.has(by(k).name.toLowerCase())&&names.add(by(k).name.toLowerCase())).slice(0,9);
-  const nums=new Set(); outs.forEach(o=>{try{(function walk(t){if(t.n!=null) nums.add(String(t.n)); if(t.a) walk(t.a); if(t.b) walk(t.b); (t.args||[]).forEach(walk)})(parseFormula(o.formula))}catch(e){}});
-  const hasPow=outs.some(o=>/\^/.test(o.formula)), hasLn=outs.some(o=>/\bln\s*\(/.test(o.formula));
-  const tiles=[...used].concat([...nums].slice(0,4),["=","+","-","*","/"],hasPow?["^"]:[],["(",")"],hasLn?["ln("]:[]);
+  const nums=new Set(), functions=new Set();
+  let hasPower=false, hasComma=false;
+  function collectTiles(t){
+    if(t.n!=null) nums.add(String(t.n));
+    if(t.o==="^") hasPower=true;
+    if(t.f){functions.add(t.f+"("); if(t.args.length>1) hasComma=true}
+    if(t.a) collectTiles(t.a);
+    if(t.b) collectTiles(t.b);
+    (t.args||[]).forEach(collectTiles)
+  }
+  outs.forEach(o=>collectTiles(parseFormula(o.formula)));
+  const tiles=[...used,...nums,"=","+","-","*","/",...(hasPower?["^"]:[]),"(",")",...functions,...(hasComma?[","]:[])];
   const rnd=mulberry32(String(p.id||p.title||"x").split("").reduce((a,c)=>a*31+c.charCodeAt(0)>>>0,7)), shuf=a=>{const b=a.slice(); for(let i=b.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1)); [b[i],b[j]]=[b[j],b[i]]} return b};
   const eqs=outs.map(o=>{const ast=parseFormula(o.formula), uv=[...formulaVars(ast)].filter(k=>k!==o.key);
     return {out:o.key,f:o.formula,hints:[`Start with ${"{{"+o.key+"}}"} =. Which quantities does ${esc(o.name?o.name.charAt(0).toLowerCase()+o.name.slice(1):o.key)} depend on? Look back at the symbols you matched.`,

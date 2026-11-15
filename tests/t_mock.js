@@ -1,4 +1,5 @@
 const ROOT=require('path').resolve(__dirname,'..');
+const assert=require('node:assert/strict');
 module.exports=async(p,H)=>{
   await p.addInitScript({path:ROOT+'/tests/mockclaude.js'});
   // read uploads with the copies npm installed (falls back to the CDN when they're missing)
@@ -31,6 +32,22 @@ module.exports=async(p,H)=>{
   console.log('from file:',await p.inputValue('[data-f="p.title"]'),'| src:',(await p.textContent('.edsrc')).replace(/\s+/g,' ').trim());
   console.log('AI saw file text:',await p.evaluate(()=>(window.__aiCalls||[]).slice(-1)[0]));
   await p.click('#ed-save'); await p.waitForTimeout(300);
+  await p.click('#ed-prev');
+  await p.locator('.icard h1').waitFor();
+  assert.equal(await p.locator('.icard h1').innerText(),'Lemonade stand profit');
+  assert.equal(await p.locator('.icard .top p').innerText(),'Maya runs a lemonade stand at the school fair. How many cups must she sell to break even?');
+  await p.locator('.icard [data-prob]').click();
+  const info=p.getByRole('dialog');
+  assert.deepEqual(await info.locator('.imported-facts dd').allTextContents(),['$15','$0.40','$1.50']);
+  assert.deepEqual(await info.locator('.problem-copy strong').allTextContents(),['$15','$0.40','$1.50']);
+  assert.equal(await info.locator('.ptext').innerText(),'How many cups must she sell to break even?');
+  await info.getByRole('button',{name:'Back to Understand'}).click();
+  await p.click('#go1');
+  await p.click('.def-left [data-prob]');
+  assert.equal(await info.getByRole('heading',{name:"What you'll define"}).count(),1);
+  assert.equal(await info.locator('.imported-facts .pcard').count(),3);
+  await info.getByRole('button',{name:'Back to Define'}).click();
+  assert.equal(await info.count(),0);
   await p.goto('file://'+ROOT+'/index.html#workspace'); await p.waitForTimeout(500); console.log('workspace list:',await p.$$eval('.prow b',b=>b.map(x=>x.textContent).join(' / ')));
   await H.shot('tm_ws_list',true);
   // ---- a student arrives
@@ -59,13 +76,16 @@ module.exports=async(p,H)=>{
   console.log('goals:\n'+(await goals()).join('\n'));
   await H.tap('v','Add set block cost_A'); await p.locator('#cv .stack.root > .b:last-child select.bsel').first().selectOption('cost_B');
   await H.tap('m','Add + block'); await H.tap('v','Add variable block join_B'); await H.tap('m','Add × block'); await H.tap('v','Add variable block fee_B'); await H.tap('v','Add variable block m');
-  await H.tap('g','Add plot block'); await H.tap('g','Add plot block'); await p.locator('#cv .stack.root > .b:last-child select.bsel').first().selectOption('cost_B');
+  await H.tap('g','Add plot block');
+  assert.ok(await p.locator('#nextb').isDisabled(),'both outputs must appear on the graph');
+  await H.tap('g','Add plot block'); await p.locator('#cv .stack.root > .b:last-child select.bsel').first().selectOption('cost_B');
   console.log('goals:\n'+(await goals()).join('\n'));
   await H.shot('tm_custom_build');
   await p.click('#nextb'); await p.waitForTimeout(400); console.log('equation step done:',await require(ROOT+'/tests/eqsolve.js')(p,'autoEqSpec(MISSIONS[location.hash.slice(1)].prob)')); await H.shot('t_mock_eq',true); await p.click('#nextb'); await p.waitForTimeout(300); await p.click('#runall'); await p.waitForTimeout(200);
   console.log('checks:',await p.$$eval('.status',s=>s.map(x=>x.textContent).join(' ')));
   await H.shot('tm_custom_test',true);
   await p.click('#nextb'); await p.waitForTimeout(300);
+  assert.ok(await p.locator('.lesson-compare tbody tr').count()>=2,'Explain compares results across cases');
   await p.fill('#ans','StreamB, because after 12 months it costs $170 and StreamA costs $180.'); await p.fill('#why','The lines cross at 10 months; after that StreamB is cheaper.');
   await H.shot('tm_custom_explain',true);
   await p.click('#sub'); await p.waitForTimeout(3500);

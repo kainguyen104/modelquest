@@ -85,12 +85,29 @@ Tests open `index.html` in a headless browser, play through the missions, and sa
 - **Running the model.** `modelRunner(V, prog).at(inputs)` runs the compiled model with given inputs. The graph, the goal checks, the Test step and the Wildfire simulation all call it. Answers are checked by comparing outputs at several inputs, so any equivalent form is accepted. Chance uses a seeded random generator, so runs can be repeated.
 - **Data.** Progress is saved in the browser. In the original version the app was published as a Claude artifact on claude.ai, which provided a shared database (students' progress, teacher problems, teacher-only answer keys, class settings), sign-in, file storage and AI. Without that, `cloudInit()` in `j7_cloud.js` falls back to a local database in `localStorage`.
 
-## Running with a backend
+## Deploy ModelQuest on Vercel
 
-To run class features on your own hosting, replace the platform calls in `src/j7_cloud.js`:
+Vercel serves the website and runs the Gemini API routes in a Node.js function. The built-in challenges are public. Teacher drafts, problems published from Workspace, and student progress are stored per browser and site address. Moving to a new domain starts a separate browser workspace.
+
+1. Push the project files, including `vercel.json`, `index.html` and `package-lock.json`. Rebuild `index.html` with `python3 build.py` after editing `src/`.
+2. Import the repository in Vercel. Select the **Other** framework preset if prompted and keep Fluid Compute enabled. The repository selects Node.js 24, installs from the lockfile, and builds the static site into `dist/`. [Vercel build settings](https://vercel.com/docs/builds/configure-a-build)
+3. Add a fresh [Gemini API key](https://aistudio.google.com/apikey) as `GEMINI_API_KEY` and a random teacher code as `MODELQUEST_AI_TOKEN` in the project's Environment Variables. Generate a code with `node -p "require('node:crypto').randomBytes(32).toString('base64url')"`. Share that teacher code privately. [Vercel environment variables](https://vercel.com/docs/environment-variables)
+4. Connect a **Private Blob** store in **Storage** and make its `BLOB_READ_WRITE_TOKEN` available to the deployment environment. This lets PDF and image uploads above 4 MiB retain the 25 MB app limit. Smaller uploads and extracted text work without Blob. [Vercel Private Blob](https://vercel.com/docs/vercel-blob/private-storage)
+5. Deploy and open the site. In **Settings**, choose **Teacher**, then use **Workspace → AI access** to enter the teacher code. Try a file upload and confirm that the editor opens with a draft. `/healthz` checks the function.
+
+The server verifies the teacher code and keeps the Gemini key private. AI calls are throttled per running function instance, with defaults of 12 requests per minute and 100 per day. Set `MODELQUEST_AI_DAILY_LIMIT` to adjust the per-instance daily cap. Large files use a short-lived upload URL, are private while stored, and are deleted after the server reads them. Temporary uploads that are abandoned expire automatically.
+
+## Run locally with Gemini
+
+On Node.js 24, run `npm ci`, copy `.env.example` to `.env`, and set `GEMINI_API_KEY`. Setting `MODELQUEST_AI_TOKEN` also enables the teacher code prompt locally. Run `npm start` and open [localhost:3000](http://localhost:3000).
+
+Gemini can suggest ideas, create and revise drafts, check math, and import worksheets. PDFs and images go directly to Gemini. For Word, spreadsheets, CSV and text, the browser reads the file and sends extracted text. Uploads are limited to 25 MB and extracted text to 40,000 characters.
+
+## Hosting shared classroom data
+
+To run shared class features on your own hosting, replace the data and identity platform calls in `src/j7_cloud.js`:
 
 - **Database and sign-in:** for example Firebase or Supabase. The app's data code already uses Firestore-style calls (`collection`, `doc`, `get`, `set`, `onSnapshot`), so the local fallback `localDB()` shows the interface to implement. Recreate the access rules: students read and write only their own `progress/<id>`; teachers read all progress; `problems` readable by students, writable by teachers; `keys` (answer keys) teachers only.
-- **AI:** a small server function that calls the Anthropic API. Keep the API key on the server, never in the page.
 - **Students under 18:** if students sign in, use an approved school sign-in and follow student-privacy rules (such as FERPA and COPPA).
 
 ## Change or extend it
