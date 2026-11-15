@@ -21,13 +21,14 @@ const draftSchema = object({
   question: string,
   vars: array(object({
     key: string, name: string, unit: string, kind: choice("in", "par", "out"),
-    min: number, max: number, step: number, start: number, val: number, formula: string
+    min: number, max: number, step: number, start: number, val: number, formula: string, group: string
   }, ["key", "name", "unit", "kind"])),
   assumptions: array(object({ t: string, ok: boolean, sug: boolean, why: string })),
   goals: array(object({ out: string, text: string, hints: array(string) })),
   steps: object({
     understand: string, define: string, diagram: string, build: string, equation: string, test: string, explain: string
   }),
+  cases: array(object({ title: string, prompt: string, inputs: array(object({ key: string, value: number })) })),
   explain: object({ prompt: string }),
   explainAnswer: string,
   solution: object({ steps: string, answer: string }),
@@ -42,6 +43,7 @@ Write brief as a student-facing introduction of at most 360 characters. Use exac
 Use 1–2 slider inputs (kind in, with min, max, positive step and start), given constants (kind par, with val), and 1–3 computed outputs (kind out, with formula). Refer to constants by key and state their values in the story. Keys are unique, start with a letter, and contain at most 14 letters, digits or underscores. Write formulas using keys, numbers, parentheses, + - * / ^, and sqrt abs ln log exp round floor ceil min max. An output may use an earlier output.
 Include assumptions for students to judge. Mark correct assumptions with ok and mark some of those as suggested with sug. Give a reason for incorrect assumptions.
 Give each output a goal with three progressively detailed hints: work a small case, state the relationship using the keys, then describe how to assemble the blocks and give a console value to check. Give a short tip for each mission step. In Diagram students show what quantities each output depends on. In Equation students assemble and apply symbolic equations. In Explain students answer a question using their model. Put the worked solution and model explanation in the teacher fields.
+Build the lesson around the worksheet's main decision or question. Give each step a concrete action tied to this story. Use a shared group label when given numbers belong to the same option, like the monthly fee and per-GB rate for Plan A. Write three distinct test situations with short, concrete titles and a one-sentence prompt. Include the story's input values and a contrasting or meaningful boundary case. Each case uses the original input keys and values on the slider grid where every output is finite. Let the app calculate expected outputs. For the Explain question, ask the learner to compare relevant results across inputs or options and back up their answer with numbers and an assumption.
 For an attached PDF or image, put a brief transcription of the relevant exercise in sourceText (up to 3000 characters) for the teacher to compare. For extracted text, leave sourceText empty. Use plain text in brief and variable keys/formulas. In story and question, use LaTeX delimiters \\( ... \\) for inline math and \\[ ... \\] for displayed equations already given in the worksheet. Use subscripts such as s_1, fractions and mathematical symbols. Keep every original given relationship in story, and keep worked answers in the teacher solution fields. In JSON, escape backslashes correctly.`;
 
 class ImportError extends Error {

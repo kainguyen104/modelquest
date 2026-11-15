@@ -45,6 +45,7 @@ test("server imports extracted text and sends PDFs directly to Gemini", async t 
   assert.match(calls[0].url, /\/gemini-test-flash:generateContent$/);
   assert.equal(calls[0].headers["x-goog-api-key"], "server-only-key");
   assert.equal(calls[0].generationConfig.responseMimeType, "application/json");
+  assert.equal(calls[0].generationConfig.responseJsonSchema.properties.cases.items.properties.inputs.type, "array");
   assert.deepEqual(calls[0].contents[0].parts[1], { text });
 
   const pdf = await readFile(path.join(__dirname, "fx", "cooling.pdf"));

@@ -37,6 +37,8 @@ defB("mul",bin("×",(a,b)=>a*b,"×"));
 defB("div",bin("÷",(a,b,n)=>{if(b===0) throw new BErr(n.id,"This ÷ block divides by 0."); return a/b},"÷"));
 defB("pow",bin("^",(a,b,n)=>{const r=Math.pow(a,b); if(!Number.isFinite(r)) throw new BErr(n.id,"This ^ block gives a number that's too big or undefined."); return r},"^"));
 defB("mod",bin("mod",(a,b,n)=>{if(b===0) throw new BErr(n.id,"mod 0 is undefined."); return ((a%b)+b)%b},"mod"));
+defB("min",bin("min",(a,b)=>Math.min(a,b),"min"));
+defB("max",bin("max",(a,b)=>Math.max(a,b),"max"));
 defB("fn",{shape:"rp",cat:"m",tpl:[{m:"fn",o:FNS},{i:"a"}],f:{fn:"sqrt"},say:"function",c:(n,K)=>{const a=K.num(n,"a"),k=n.f.fn,f=FNF[k]||Math.sqrt;
   return e=>{const x=a(e); if((k==="sqrt"&&x<0)||((k==="ln"||k==="log")&&x<=0)) throw new BErr(n.id,`${(FNS.find(o=>o[0]===k)||[0,k])[1]} of ${fmt(x,2)} is undefined.`); return f(x)}}});
 defB("rand",{shape:"rp",cat:"m",tpl:["pick random",{i:"a"},"to",{i:"b"}],d:{a:"1",b:"10"},say:"pick random",c:(n,K)=>{const a=K.num(n,"a"),b=K.num(n,"b"); const ints=[n.a.a,n.a.b].every(s=>typeof s==="string"&&/^-?\d+$/.test(s.trim()));
@@ -298,7 +300,7 @@ function stdLib(cat,V,o={}){
   const out0=ks.find(k=>V[k].kind==="out")||ks.find(k=>V[k].kind==="mine")||"", mine=of("mine");
   if(cat==="v") return [{head:"Inputs (you slide these)"},...of("in"),{head:"Given numbers"},...of("par"),{head:"Your model calculates"},...of("out"),
     ...(mine.length?[{head:"Your variables"},...mine]:[]),{head:"Commands"},{type:"set",f:{v:out0}},{type:"change",f:{v:(mine[0]&&mine[0].f.v)||out0}},{make:true}];
-  if(cat==="m") return [{type:"add"},{type:"sub"},{type:"mul"},{type:"div"},{type:"pow"},{type:"fn",f:{fn:o.fn||"round"}},{type:"mod"},{type:"rand"}];
+  if(cat==="m") return [{type:"add"},{type:"sub"},{type:"mul"},{type:"div"},{type:"pow"},{type:"fn",f:{fn:o.fn||"round"}},...(o.extrema?[{type:"min"},{type:"max"}]:[]),{type:"mod"},{type:"rand"}];
   if(cat==="l") return [{type:"lt"},{type:"gt"},{type:"eq"},{type:"and"},{type:"or"},{type:"not"},{type:"if"},{type:"ifelse"}];
   if(cat==="o") return [{type:"repeat"},{type:"until"},...(o.loopNote?[{note:o.loopNote}]:[])];
   if(cat==="g") return [{type:"plot",f:{y:o.plotY||out0,x:ks.find(k=>V[k].kind==="in")}},{type:"say",a:{x:o.sayText??"Hello!"}}];

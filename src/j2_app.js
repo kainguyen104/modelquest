@@ -453,5 +453,6 @@ function rangeHTML(id,label,min,max,step,val,color){
 function paintRange(r){r.style.setProperty("--p",((r.value-r.min)/(r.max-r.min)*100)+"%")}
 function goalsHTML(list){return list.map(g=>`<div class="goal ${g.ok?"ok":""} ${g.isNew&&!g.ok?"new":""}"><i></i><span>${g.t}${g.tag?`<em class="gtag">${g.tag}</em>`:""}${!g.ok&&g.fb?`<small class="gfb">${g.fb}</small>`:""}</span></div>`).join("")}
 function testCard(t){return `<div class="card tcard" data-t="${t.id}"><div class="top"><div class="chip" style="background:${t.chip||"var(--mint-pill)"}">${ic(t.ic||"check",2.6)}</div><b>${esc(t.name)}</b><span class="st status">Not run</span></div>
+  ${t.prompt?`<p class="test-prompt">${esc(t.prompt)}</p>`:""}
   <code>${t.code}</code><div class="said">Your model says: —</div></div>`}
 function setTest(el,id,pass,said){const c=$(`[data-t="${id}"]`,el); if(!c)return; const s=$(".st",c); s.className="st status "+(pass?"pass":"fail"); s.textContent=pass?"Pass":"Fail"; $(".said",c).innerHTML=said}

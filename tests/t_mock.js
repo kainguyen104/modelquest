@@ -76,13 +76,16 @@ module.exports=async(p,H)=>{
   console.log('goals:\n'+(await goals()).join('\n'));
   await H.tap('v','Add set block cost_A'); await p.locator('#cv .stack.root > .b:last-child select.bsel').first().selectOption('cost_B');
   await H.tap('m','Add + block'); await H.tap('v','Add variable block join_B'); await H.tap('m','Add × block'); await H.tap('v','Add variable block fee_B'); await H.tap('v','Add variable block m');
-  await H.tap('g','Add plot block'); await H.tap('g','Add plot block'); await p.locator('#cv .stack.root > .b:last-child select.bsel').first().selectOption('cost_B');
+  await H.tap('g','Add plot block');
+  assert.ok(await p.locator('#nextb').isDisabled(),'both outputs must appear on the graph');
+  await H.tap('g','Add plot block'); await p.locator('#cv .stack.root > .b:last-child select.bsel').first().selectOption('cost_B');
   console.log('goals:\n'+(await goals()).join('\n'));
   await H.shot('tm_custom_build');
   await p.click('#nextb'); await p.waitForTimeout(400); console.log('equation step done:',await require(ROOT+'/tests/eqsolve.js')(p,'autoEqSpec(MISSIONS[location.hash.slice(1)].prob)')); await H.shot('t_mock_eq',true); await p.click('#nextb'); await p.waitForTimeout(300); await p.click('#runall'); await p.waitForTimeout(200);
   console.log('checks:',await p.$$eval('.status',s=>s.map(x=>x.textContent).join(' ')));
   await H.shot('tm_custom_test',true);
   await p.click('#nextb'); await p.waitForTimeout(300);
+  assert.ok(await p.locator('.lesson-compare tbody tr').count()>=2,'Explain compares results across cases');
   await p.fill('#ans','StreamB, because after 12 months it costs $170 and StreamA costs $180.'); await p.fill('#why','The lines cross at 10 months; after that StreamB is cheaper.');
   await H.shot('tm_custom_explain',true);
   await p.click('#sub'); await p.waitForTimeout(3500);

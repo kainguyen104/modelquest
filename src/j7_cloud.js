@@ -148,10 +148,36 @@ function probModel(p){
 const niceNum=x=>Math.round(x*1e6)/1e6;
 function samplePoints(p){const ins=p.vars.filter(v=>v.kind==="in"); if(!ins.length) return [{}];
   const base={}; ins.forEach(v=>base[v.key]=v.start);
-  const vals=v=>{const s=v.step||1, pick=[0,.25,.5,.8,1].map(f=>niceNum(Math.round((v.min+(v.max-v.min)*f)/s)*s)); return [...new Set(pick)].filter(x=>x>=v.min-1e-9&&x<=v.max+1e-9)};
+  const vals=v=>{const s=v.step||1, steps=Math.floor((v.max-v.min)/s+1e-9);
+    return [...new Set([0,.25,.5,.8,1].map(f=>+(v.min+Math.round(steps*f)*s).toPrecision(14)))]};
   const pts=[]; vals(ins[0]).forEach(x=>pts.push(Object.assign({},base,{[ins[0].key]:x})));
   ins.slice(1).forEach(v=>vals(v).filter((_,i)=>i%2===0).forEach(x=>pts.push(Object.assign({},base,{[v.key]:x}))));
+  pts.push(base);
   const seen=new Set(); return pts.filter(o=>{const k=JSON.stringify(o); if(seen.has(k)) return false; seen.add(k); return true}).slice(0,10)}
+
+function lessonCases(p,model=probModel(p)){
+  const inputs=p.vars.filter(v=>v.kind==="in"), outputs=p.vars.filter(v=>v.kind==="out"&&!model.errs[v.key]);
+  if(!inputs.length||!outputs.length) return [];
+  const start=Object.fromEntries(inputs.map(v=>[v.key,v.start]));
+  const values=c=>Object.fromEntries(c.inputs.map(x=>[x.key,x.value]));
+  const valid=pt=>{const expected=model.at(pt); return outputs.every(v=>Number.isFinite(expected[v.key]))};
+  const points=samplePoints(p).filter(valid);
+  const primary=inputs[0], authored=p.cases||[];
+  const sweep=points.filter(pt=>inputs.slice(1).every(v=>pt[v.key]===start[v.key])).sort((a,b)=>a[primary.key]-b[primary.key]);
+  const suggested=[
+    {title:"Start with the story",point:start},
+    {title:"At the low end",point:sweep[0]},
+    {title:"At the high end",point:sweep.at(-1)},
+    {title:"Try another input",point:sweep[Math.floor(sweep.length/2)]}
+  ];
+  const seen=new Set();
+  return [...authored.map(c=>({title:c.title,prompt:c.prompt,point:values(c)})),...suggested].filter(c=>{
+    if(!c.point||!valid(c.point)||inputs.some(v=>c.point[v.key]<v.min||c.point[v.key]>v.max)) return false;
+    const key=JSON.stringify(inputs.map(v=>c.point[v.key]));
+    if(seen.has(key)) return false;
+    seen.add(key); return true
+  }).slice(0,Math.max(3,authored.length));
+}
 
 /* ---------- problems: one shape for files, AI drafts and the editor ---------- */
 const PRACTICES=[["MP1","Make sense of problems and persevere"],["MP2","Reason abstractly and quantitatively"],["MP3","Construct arguments and critique reasoning"],["MP4","Model with mathematics"],["MP5","Use tools strategically"],["MP6","Attend to precision"],["MP7","Look for and use structure"],["MP8","Use regularity in repeated reasoning"]];
@@ -172,12 +198,12 @@ function normProblem(x){x=x&&typeof x==="object"?x:{};
     brief:str(x.brief,360),story:str(x.story,3000),question:str(x.question,600),status:x.status==="published"?"published":"draft",
     createdAt:numOr(x.createdAt,Date.now()),updatedAt:numOr(x.updatedAt,Date.now()),author:str(x.author,80),
     source:x.source&&typeof x.source==="object"?{name:str(x.source.name,120),type:str(x.source.type,20),asset:str(x.source.asset,40)}:null,
-    vars:[],assumptions:[],goals:[],steps:{},explain:{prompt:str(x.explain&&x.explain.prompt,600)}};
+    vars:[],assumptions:[],goals:[],steps:{},cases:[],explain:{prompt:str(x.explain&&x.explain.prompt,600)}};
   const seen=new Set();
   (Array.isArray(x.vars)?x.vars:[]).slice(0,14).forEach(v=>{if(!v||typeof v!=="object") return; let k=normKey(v.key||v.name); if(!k) return; while(seen.has(k)) k=(k+"_2").slice(-14); seen.add(k);
     const kind=["in","par","out"].includes(v.kind)?v.kind:v.formula?"out":v.val!=null?"par":"in";
     const r={key:k,name:str(v.name,120),unit:str(v.unit,20),kind};
-    if(kind==="par") r.val=numOr(v.val,0);
+    if(kind==="par"){r.val=numOr(v.val,0); r.group=str(v.group,60)}
     if(kind==="in"){let a=numOr(v.min,0), b=numOr(v.max,a+10); if(b<=a) b=a+10; const step=numOr(v.step,0)>0?numOr(v.step,1):niceNum(Math.pow(10,Math.floor(Math.log10((b-a)/50))));
       r.min=a; r.max=b; r.step=step; r.start=clamp(numOr(v.start,(a+b)/2),a,b)}
     if(kind==="out") r.formula=str(v.formula,300);
@@ -187,17 +213,34 @@ function normProblem(x){x=x&&typeof x==="object"?x:{};
   const outs=o.vars.filter(v=>v.kind==="out").map(v=>v.key), gx=Array.isArray(x.goals)?x.goals:[];
   o.goals=outs.map(k=>{const g=gx.find(q=>q&&normKey(q.out)===k)||{}; const hs=(Array.isArray(g.hints)?g.hints:[]).map(h=>str(h,700)).filter(Boolean).slice(0,3); return {out:k,text:str(g.text,200),hints:hs}});
   const sx=x.steps&&typeof x.steps==="object"?x.steps:{}; ["understand","define","diagram","build","equation","test","explain"].forEach(k=>o.steps[k]=str(sx[k],600));
+  const ins=o.vars.filter(v=>v.kind==="in");
+  o.cases=(Array.isArray(x.cases)?x.cases:[]).filter(c=>c&&typeof c==="object").slice(0,4).map(c=>{
+    const given=Array.isArray(c.inputs)?c.inputs:[];
+    return {title:str(c.title,90),prompt:str(c.prompt,300),inputs:ins.map(v=>({
+      key:v.key,value:numOr(given.find(it=>it?.key===v.key)?.value,v.start)
+    }))};
+  });
   return o}
 function problemIssues(p){const out=[], m=probModel(p), V=p.vars;
   if(!p.title) out.push("Give the problem a title.");
   if(!p.story) out.push("Write the problem information students read.");
   if(!V.some(v=>v.kind==="out")) out.push("Add at least one output for students to build.");
   if(!V.some(v=>v.kind==="in")) out.push("Add an input students can slide (it lets the model draw a graph).");
-  V.forEach(v=>{if(!v.key) out.push("Every variable needs a name."); if(v.kind==="out"&&m.errs[v.key]) out.push(`${v.key}: ${m.errs[v.key]}`)});
+  const start=m.at({});
+  V.forEach(v=>{if(!v.key) out.push("Every variable needs a name."); if(v.kind!=="out") return;
+    if(m.errs[v.key]) out.push(`${v.key}: ${m.errs[v.key]}`);
+    else if(!Number.isFinite(start[v.key])) out.push(`Choose starting slider values where ${v.key} has an answer.`);
+  });
+  p.cases.forEach((c,i)=>{
+    const inputValues=Object.fromEntries(c.inputs.map(x=>[x.key,x.value]));
+    const label=c.title||`Test situation ${i+1}`;
+    if(V.some(v=>v.kind==="in"&&(inputValues[v.key]<v.min||inputValues[v.key]>v.max))) out.push(`${label}: use values within the slider ranges.`);
+    else if(V.some(v=>v.kind==="out"&&!Number.isFinite(m.at(inputValues)[v.key]))) out.push(`${label}: use input values where the formulas have an answer.`);
+  });
   if(!p.assumptions.some(a=>a.ok)) out.push("Add at least one assumption the model makes.");
   if(!p.explain.prompt) out.push("Write the question students answer in Explain.");
   return out}
-const PROB_FIELDS=["title","topic","area","grade","difficulty","minutes","practices","brief","story","question","status","createdAt","updatedAt","author","source","vars","assumptions","goals","steps","explain"];
+const PROB_FIELDS=["title","topic","area","grade","difficulty","minutes","practices","brief","story","question","status","createdAt","updatedAt","author","source","vars","assumptions","goals","steps","cases","explain"];
 function registerProblems(){for(const id in Cloud.problems){const p=Cloud.problems[id]; MISSIONS["p-"+id]=customMission(p)}}
 async function saveProblem(p,key){p=normProblem(p); p.updatedAt=Date.now(); if(!p.author&&Cloud.uid) p.author=Cloud.uid;
   const pub={}; PROB_FIELDS.forEach(k=>pub[k]=p[k]);
@@ -312,18 +355,20 @@ const SCHEMA_TEXT=`Reply with only one JSON object of this shape (no other text)
  "story": "the full problem in short paragraphs, with all the information and numbers the model needs",
  "question": "the decision or question the finished model answers",
  "vars": [ {"key": "g", "name": "data used in a month", "unit": "GB", "kind": "in", "min": 0, "max": 30, "step": 0.5, "start": 8},
-           {"key": "fee_A", "name": "Plan A's monthly fee", "unit": "$", "kind": "par", "val": 20},
+           {"key": "fee_A", "name": "Monthly fee", "unit": "$", "kind": "par", "val": 20, "group": "Plan A"},
            {"key": "cost_A", "name": "Plan A's bill for the month", "unit": "$", "kind": "out", "formula": "fee_A + rate_A * g"} ],
  "assumptions": [ {"t": "...", "ok": true, "sug": true}, {"t": "...", "ok": true, "sug": false}, {"t": "a tempting assumption the model does NOT make", "ok": false, "why": "one sentence on why not"} ],
  "goals": [ {"out": "cost_A", "text": "Build cost_A: Plan A's bill for g GB", "hints": ["Hint 1: a question that works one small case with the story's numbers", "Hint 2: the relationship in words and as a formula with the variable keys", "Hint 3: numbered build steps, like 1. From Variables, drag a set block and choose cost_A. 2. From Math, drop a + block into its slot. 3. ... ending with a value to check in the console"]} ],
  "steps": {"understand": "", "define": "", "diagram": "", "build": "", "equation": "", "test": "", "explain": ""},
+ "cases": [{"title":"A month with no data", "prompt":"Work out what both plans charge before any data is used.", "inputs":[{"key":"g","value":0}]}],
  "explain": {"prompt": "the question students answer in writing at the end, using their model"},
  "explainAnswer": "a model answer for the teacher",
  "solution": {"steps": "the worked solution in 3-8 short lines", "answer": "the final answer"},
  "notes": "anything the teacher should double-check"}
 Rules:
 - The model must be a formula model: "in" variables are inputs students slide, "par" variables are given numbers from the story, "out" variables are what students build. Use 1-2 inputs, 2-6 given numbers and 1-3 outputs.
-- Every given number in "vars" must appear in the story. Units go in "unit", not in names.
+- Every given number in "vars" must appear in the story. Units go in "unit". Use a shared "group" label for given values belonging to the same option or scenario, or omit it if there is no natural group.
+- Add three distinct cases, including the story input and a contrasting or edge case. Give each a short story title and a question. Supply exact input keys and values within the slider ranges, with all outputs defined at each point.
 - Keys: letters, digits and _ only, start with a letter, at most 14 characters (like cost_A, N0, rate).
 - Formulas use only keys, numbers, + - * / ^, brackets, and the functions sqrt abs ln log exp round floor ceil min max. An output may use an earlier output.
 - Input ranges must make sense for the story; "start" is the value the story is about.
@@ -348,9 +393,9 @@ function aiFilePrompt(name,text){return `A teacher uploaded a problem from a fil
 Keep the teacher's story, numbers, questions and solution wherever the file gives them. Where the file doesn't say something the format needs (keys, kinds, ranges, formulas, assumptions, hints, step tips, explain question), add it, and list what you added in "notes".
 ${text?`File text:\n"""\n${text.slice(0,40000)}\n"""\n`:"The file is attached as pictures of its pages.\n"}
 ${SCHEMA_TEXT}`}
-function aiRevisePrompt(p,key,instr){const cur=Object.assign({},p,{explainAnswer:key&&key.explainAnswer||"",solution:key&&key.solution||{steps:"",answer:""}});
+function aiRevisePrompt(p,key,instr,sourceText=""){const cur=Object.assign({},p,{explainAnswer:key&&key.explainAnswer||"",solution:key&&key.solution||{steps:"",answer:""}});
   ["id","status","createdAt","updatedAt","author","source"].forEach(k=>delete cur[k]);
-  return `Here is a ModelQuest math-modeling problem as JSON:\n${JSON.stringify(cur)}\n\nThe teacher asks: ${instr}\nReturn the whole updated problem. Keep everything the teacher didn't ask to change. In "notes", say in one or two sentences what you changed.\n${SCHEMA_TEXT}`}
+  return `Here is a ModelQuest math-modeling problem as JSON:\n${JSON.stringify(cur)}\n\nThe teacher asks: ${instr}\n${sourceText?`Original worksheet, for reference only: ${JSON.stringify(sourceText.slice(0,10000))}\n`:""}Return the whole updated problem. Keep everything the teacher didn't ask to change. In "notes", say in one or two sentences what you changed.\n${SCHEMA_TEXT}`}
 function aiCheckPrompt(p,key){const cur=Object.assign({},p,{solution:key&&key.solution||{}}); ["id","status","createdAt","updatedAt","author","source"].forEach(k=>delete cur[k]);
   return `Check this ModelQuest math-modeling problem for mistakes a teacher would want to fix before students see it: numbers in the vars that don't match the story, formulas that don't match the story or the solution, wrong units, input ranges that don't make sense, assumptions marked right or wrong incorrectly, hints that give away the whole answer, and language that's wrong for the grade.\n${JSON.stringify(cur)}\nReply with only a JSON object: {"ok": true|false, "issues": ["one short sentence per problem, most important first"], "praise": "one sentence on what works"}`}
 function splitAI(x){x=x&&typeof x==="object"?x:{};

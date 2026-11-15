@@ -4,7 +4,7 @@ const TOPIC_LOOK={Finance:["dollar","#B4E9FE"],Physics:["atom","#DECFFD"],Chemis
 const lookFor=p=>TOPIC_LOOK[p.topic]||["sigma","#E9E2FD"];
 const capFirst=s=>{s=String(s||""); return s.charAt(0).toUpperCase()+s.slice(1)};
 function unitShow(u){return x=>!Number.isFinite(x)?"—":u==="$"?money(x):u==="%"?fmt(x,Math.abs(x-Math.round(x))<0.05?0:1)+"%":
-  fmt(x,Math.abs(x-Math.round(x))<1e-9||Math.abs(x)>=1000?0:Math.abs(x)<1?3:2)+(u?" "+u:"")}
+  x.toLocaleString("en-US",{maximumSignificantDigits:7})+(u?" "+u:"")}
 const showV=(v,x)=>unitShow(v.unit)(x);
 function customVars(p,st){const V={};
   p.vars.forEach(v=>{const x={kind:v.kind,label:v.key,name:v.name||v.key,unit:v.unit,show:unitShow(v.unit)}; if(v.kind==="par"){x.val=v.val; x.src="the problem"} V[v.key]=x});
@@ -19,12 +19,12 @@ function astText(t,top){if(t.n!=null) return String(t.n); if(t.v) return t.v;
 function astSteps(t,where,out,off){const leaf=x=>x.n!=null||!!x.v, lt=x=>`<b>${esc(x.v||String(x.n))}</b>`;
   if(t.n!=null){out.push(`Type <b>${esc(String(t.n))}</b> in ${where}.`); return true}
   if(t.v){out.push(`Drag <b>${esc(t.v)}</b> from Variables into ${where}.`); return true}
-  if(t.f==="pow"&&t.args.length===2) t={o:"^",a:t.args[0],b:t.args[1]};
+  if(t.f==="pow"||t.f==="min"||t.f==="max") t={o:t.f==="pow"?"^":t.f,a:t.args[0],b:t.args[1]};
   if(t.f){const nm=FN_BLOCK[t.f]; if(!nm||t.args.length!==1) return false; const me=off+out.length;
     if(leaf(t.args[0])){out.push(`Drop a <b>function</b> block from Math into ${where}, choose <b>${esc(nm)}</b> in its menu, and put ${lt(t.args[0])} in its slot.`); return true}
     out.push(`Drop a <b>function</b> block from Math into ${where} and choose <b>${esc(nm)}</b> in its menu.`); return astSteps(t.args[0],`the slot of the ${esc(nm)} block from step ${me}`,out,off)}
   if(t.o==="neg"){const me=off+out.length; out.push(`Drop a <b>−</b> block from Math into ${where} and type <b>0</b> in its left slot.`); return astSteps(t.a,`the right slot of the − block from step ${me}`,out,off)}
-  const sym=OPS[t.o], me=off+out.length;
+  const sym=OPS[t.o]||t.o, me=off+out.length;
   if(leaf(t.a)&&leaf(t.b)){out.push(`Drop a <b>${sym}</b> block from Math into ${where}. Put ${lt(t.a)} in its left slot and ${lt(t.b)} in its right slot.`); return true}
   if(leaf(t.a)){out.push(`Drop a <b>${sym}</b> block from Math into ${where}, and put ${lt(t.a)} in its left slot.`); return astSteps(t.b,`the right slot of the ${sym} block from step ${me}`,out,off)}
   if(leaf(t.b)){out.push(`Drop a <b>${sym}</b> block from Math into ${where}, and put ${lt(t.b)} in its right slot.`); return astSteps(t.a,`the left slot of the ${sym} block from step ${me}`,out,off)}
@@ -51,15 +51,17 @@ function hintFmt(t){const s=String(t||"").trim(); if(!s) return "";
 function customChecks(p,R,model,pts){const G=[], outs=p.vars.filter(v=>v.kind==="out"&&!model.errs[v.key]), ins=p.vars.filter(v=>v.kind==="in");
   outs.forEach(v=>{const g=p.goals.find(x=>x.out===v.key)||{}; let res={ok:true};
     for(const pt of pts){const e=R.at(pt), y=e.v[v.key], want=model.at(pt)[v.key];
-      if(y===undefined){res={ok:false,fb:Object.keys(e.errs).length?redFix(e.errs):`<b>${esc(v.key)}</b> isn't set yet. Drag a <b>set</b> block from Variables into your program and choose <b>${esc(v.key)}</b> in its menu.`}; break}
       if(!Number.isFinite(want)) continue;
+      if(y===undefined){res={ok:false,fb:Object.keys(e.errs).length?redFix(e.errs):`<b>${esc(v.key)}</b> isn't set yet. Drag a <b>set</b> block from Variables into your program and choose <b>${esc(v.key)}</b> in its menu.`}; break}
       if(!(Number.isFinite(y)&&Math.abs(y-want)<=1e-6*Math.max(1,Math.abs(want)))){res={ok:false,fb:`When ${esc(ptText(p,pt))}, your ${esc(v.key)} = ${esc(showV(v,y))}, but the problem gives ${esc(showV(v,want))}. Set the sliders to those values and check each part of your blocks against the problem information.`}; break}}
     G.push({k:v.key,t:g.text?esc(g.text):`Build <b>${esc(v.key)}</b>: ${esc(v.name||"")}`,...res,hints:(()=>{const own=(g.hints||[]).filter(Boolean).slice(0,3).map(hintFmt), gen=genericHints(p,v,model); return own.concat(gen.slice(own.length))})()})});
   if(ins.length&&outs.length){const plots=R.at(pts[0]||{}).plots, done=G.every(g=>g.ok);
-    G.push({k:"plot",t:`Plot ${outs.length>1?"your outputs":`<b>${esc(outs[0].key)}</b>`} against <b>${esc(ins[0].key)}</b>`,ok:done&&plots.some(q=>outs.some(o=>o.key===q.y)),fb:done?"Add a <b>plot</b> block from Graph.":"",
+    const missing=outs.filter(o=>!plots.some(q=>q.y===o.key&&q.x===ins[0].key));
+    G.push({k:"plot",t:`Plot ${outs.length>1?"your outputs":`<b>${esc(outs[0].key)}</b>`} against <b>${esc(ins[0].key)}</b>`,ok:done&&!missing.length,
+      fb:done&&missing.length?`Add a <b>plot</b> block from Graph for ${missing.map(o=>esc(o.key)).join(", ")} against ${esc(ins[0].key)}.`:"",
       hints:[`Your set blocks give ${outs.map(o=>esc(o.key)).join(" and ")} for one value of ${esc(ins[0].key)}. How could you see ${outs.length>1?"them":"it"} for every ${esc(ins[0].key)} at once?`,
         `A <b>plot</b> block runs your model at every ${esc(ins[0].key)} and draws it: ${esc(outs[0].key)} goes up the side and ${esc(ins[0].key)} goes along the bottom.`,
-        hsteps("Open <b>Graph</b> and drag a <b>plot</b> block to the end of your program.",`Choose <b>${esc(outs[0].key)}</b> in its first menu and <b>${esc(ins[0].key)}</b> in its second.`,...(outs.length>1?[`Add one more plot block for ${outs.slice(1).map(o=>`<b>${esc(o.key)}</b>`).join(" and ")}, also against ${esc(ins[0].key)}.`]:[]),`Slide ${esc(ins[0].key)} and watch the point move along your graph.`)]})}
+        hsteps("Open <b>Graph</b> and drag a <b>plot</b> block to the end of your program.",`Choose <b>${esc(outs[0].key)}</b> in its first menu and <b>${esc(ins[0].key)}</b> in its second.`,...(outs.length>1?[`Add a separate plot block for each remaining output, with <b>${esc(ins[0].key)}</b> in the second menu.`]:[]),`Slide ${esc(ins[0].key)} and watch the point move along your graph.`)]})}
   return G}
 function teacherNote(t){return t?`<div class="callout tnote"><span class="ci">${CIC.bulb}</span><span class="vsep"></span><div><h4>From your teacher</h4><p>${esc(t)}</p></div></div>`:""}
 const storySentences=s=>s.split(/(?<=[.!?…])\s+(?=[\p{Lu}\p{Lo}])/u);
@@ -123,11 +125,31 @@ function problemCopy(story,vars){
 function importedFacts(vars){
   const given=vars.filter(v=>v.kind==="par");
   if(!given.length) return "";
-  return `<dl class="pcards imported-facts">${given.map(v=>{
+  const groups=new Map();
+  for(const v of given){
+    const key=v.group||v;
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(v)
+  }
+  const quantity=v=>{
     const value=v.val.toLocaleString("en-US",{maximumSignificantDigits:21});
-    const quantity=v.unit==="$"?(+v.val.toFixed(2)===v.val?money(v.val):`$${value}`):v.unit==="%"?`${value}%`:[value,v.unit].filter(Boolean).join(" ");
-    return `<div class="pcard"><dt>${esc(capFirst(v.name||v.key))}</dt><dd>${esc(quantity)}</dd></div>`
+    return v.unit==="$"?(+v.val.toFixed(2)===v.val?money(v.val):`$${value}`):v.unit==="%"?`${value}%`:[value,v.unit].filter(Boolean).join(" ")
+  };
+  return `<dl class="pcards imported-facts">${[...groups].map(([group,items])=>{
+    const grouped=typeof group==="string";
+    return `<div class="pcard"><dt>${esc(grouped?group:capFirst(group.name||group.key))}</dt>
+      ${items.map(v=>`<dd>${grouped?`<span>${esc(capFirst(v.name||v.key))}</span> `:""}${esc(quantity(v))}</dd>`).join("")}</div>`
   }).join("")}</dl>`
+}
+function scenarioResults(p,R){
+  const cases=lessonCases(p), outs=p.vars.filter(v=>v.kind==="out");
+  if(!cases.length) return "";
+  const rows=cases.map(c=>({c,values:R.at(c.point).v})).filter(({values})=>outs.every(v=>Number.isFinite(values[v.key])));
+  if(rows.length<2) return "";
+  return `<div class="tw lesson-compare"><table class="tbl"><caption>Compare your results</caption>
+    <thead><tr><th>Situation</th>${outs.map(v=>`<th>${esc(capFirst(v.name||v.key))}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(({c,values})=>`<tr><td><b>${esc(c.title||"Test situation")}</b><br><span class="muted">${esc(ptText(p,c.point))}</span></td>
+      ${outs.map(v=>`<td>${esc(showV(v,values[v.key]))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
 }
 function customScene(p,interactive=true){const [icn,bg]=lookFor(p);
   return `<svg viewBox="0 0 1364 555" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="1364" height="555" fill="${bg}"/>
@@ -153,7 +175,7 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
     evidence:st=>[["Checks passed",st.d.passed!=null?`${st.d.passed} / ${st.d.passedOf||"?"}`:"—"],["Answer",st.d.ans?"Written":"—"]],
     problem:st=>{const V=customVars(p,st), as=(st.d.def&&st.d.def.as)||p.assumptions.map((a,i)=>a.sug?"a"+i:null).filter(Boolean);
       const src=p.source&&p.source.asset?`<p class="ptext"><a class="srclink" href="/_blob/${esc(p.source.asset)}" target="_blank" rel="noopener">${ic("doc",2)} Open the original file${p.source.name?`: ${esc(p.source.name)}`:""}</a></p>`:"";
-      const head=`${problemCopy(p.story,p.vars)}${importedFacts(p.vars)}${p.question?`<h3 class="ph">The question</h3><p class="ptext">${mathText(p.question,p.vars)}</p>`:""}`;
+      const head=`${problemCopy(p.story,p.vars)}${importedFacts(p.vars)}${p.question?`<h3 class="ph">The question</h3><p class="ptext">${mathText(p.question,p.vars)}</p>`:""}${st.step===0?teacherNote(p.steps.understand):""}`;
       if(st.step<=1) return head+(p.vars.length?`<h3 class="ph">What you'll define</h3><ul class="plist">${p.vars.map(v=>`<li>${problemMathHTML(mathSymbol(v.key))} — ${mathText(v.name||v.key,p.vars)}${v.unit?` (${esc(v.unit)})`:""}${v.kind==="in"?". You'll slide this.":v.kind==="out"?". Your model finds this.":""}</li>`).join("")}</ul>`:"")+src;
       return head+`<h3 class="ph">Variables</h3>${varTable(V)}<h3 class="ph">Your assumptions</h3><ul class="plist">${p.assumptions.filter((a,i)=>as.includes("a"+i)).map(a=>`<li>${esc(a.t)}</li>`).join("")||"<li class=muted>None picked yet.</li>"}</ul>${src}`}};
   const ASM=p.assumptions.map((a,i)=>({k:"a"+i,t:a.t,ok:a.ok,sug:a.sug,why:a.why||"That isn't something this model assumes."}));
@@ -182,13 +204,13 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
     el.innerHTML=studioHTML({vizTitle:p.title||"Your model",vizIc:"trend",vizChip:bg});
     const d=st.d; d.mine=d.mine||[]; const prog=d.prog||(d.prog={body:[]}), ins=p.vars.filter(v=>v.kind==="in").slice(0,3);
     const view=d.view||(d.view={}); ins.forEach(v=>{if(!Number.isFinite(view[v.key])) view[v.key]=v.start});
-    const model=probModel(p), pts=samplePoints(p), SC=["var(--yellow-btn)","#7EF0D2","#CFA8FA"];
+    const model=probModel(p), pts=samplePoints(p).concat(lessonCases(p,model).map(c=>c.point)), SC=["var(--yellow-btn)","#7EF0D2","#CFA8FA"];
     let V=customVars(p,st), R=modelRunner(V,prog), last=R.at(view);
     const sl=$("#sliders",el); sl.classList.toggle("two",ins.length===2); sl.classList.toggle("three",ins.length>2);
     sl.innerHTML=ins.map((v,i)=>rangeHTML("s"+i,`${esc(v.key)} = ${esc(showV(v,view[v.key]))}`,v.min,v.max,v.step,view[v.key],SC[i])).join("")||`<span class="muted" style="font-size:1.9rem">No inputs to slide</span>`;
     $$(".rng",sl).forEach((r,i)=>{paintRange(r); r.oninput=()=>{paintRange(r); view[ins[i].key]=+r.value; $("#s"+i+"-lab",el).textContent=`${ins[i].key} = ${showV(ins[i],view[ins[i].key])}`; save(); update()}});
     const studio=blockStudio({pal:$("#pal",el),canvas:$("#cv",el),prog,cats:["v","m","l","o","g"],hat:HAT,vars:()=>V,
-      lib:cat=>stdLib(cat,V,{fn:"sqrt",sayText:"",loopNote:"Your plot already runs the model at every input value. Loops are for questions like “how many times until…?”"}),
+      lib:cat=>stdLib(cat,V,{fn:"sqrt",extrema:true,sayText:"",loopNote:"Your plot already runs the model at every input value. Loops are for questions like “how many times until…?”"}),
       makeVar:makeVarFn(st,()=>V),varTip:(k,x)=>varTipHTML(k,x,last&&last.v[k]),onChange:()=>{st.runs=(st.runs||0)+1; save(); update()}});
     const MC=["#7C5CFF","#FF7A59","#10B5A0","#D9466B"];
     const nice=(lo,hi)=>{const raw=(hi-lo||1)/4, pw=Math.pow(10,Math.floor(Math.log10(raw))), q=raw/pw, s=(q<=1?1:q<=2?2:q<=2.5?2.5:q<=5?5:10)*pw, a=Math.floor(lo/s)*s, b=Math.ceil(hi/s)*s, t=[]; for(let x=a;x<=b+s*1e-9;x+=s) t.push(+x.toFixed(9)); return {lo:a,hi:b,t}};
@@ -221,17 +243,26 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
     $("#back",el).onclick=ctx.back; $("#nextb",el).onclick=ctx.next},
   (el,st,ctx)=>equationStep(el,m,st,ctx,autoEqSpec(p)),
   (el,st,ctx)=>{
-    const V=customVars(p,st), R=modelRunner(V,st.d.prog||{body:[]}), model=probModel(p), pts=samplePoints(p);
+    const V=customVars(p,st), R=modelRunner(V,st.d.prog||{body:[]}), model=probModel(p);
     TIPV=k=>V[k]?varTipHTML(k,V[k]):null;
-    const T=[]; p.vars.filter(v=>v.kind==="out"&&!model.errs[v.key]).forEach(v=>{const pick=[...new Set([0,Math.floor((pts.length-1)/2),pts.length-1])].map(i=>pts[i]).filter(Boolean);
-      pick.forEach(pt=>{const want=model.at(pt)[v.key]; if(!Number.isFinite(want)) return; T.push({id:"t"+T.length,name:`${v.key} when ${ptText(p,pt)||"the model runs"}`,code:esc(`check ${v.key} = ${showV(v,want)}${ptText(p,pt)?` when ${ptText(p,pt)}`:""}`),
-        f:()=>{const y=R.at(pt).v[v.key]; return [Number.isFinite(y)&&Math.abs(y-want)<=1e-6*Math.max(1,Math.abs(want)),y,v]}})})});
+    const outs=p.vars.filter(v=>v.kind==="out"&&!model.errs[v.key]);
+    const T=lessonCases(p,model).map(({title,prompt,point},i)=>{
+      const expected=model.at(point);
+      const describe=(v,value)=>`${v.key} = ${showV(v,value)}`;
+      return {id:"t"+i,name:title||"Test situation "+(i+1),prompt,
+        code:esc(`When ${ptText(p,point)}, expect ${outs.map(v=>describe(v,expected[v.key])).join(" · ")}`),
+        f:()=>{
+          const actual=R.at(point).v;
+          const ok=outs.every(v=>Number.isFinite(actual[v.key])&&Math.abs(actual[v.key]-expected[v.key])<=1e-6*Math.max(1,Math.abs(expected[v.key])));
+          return {ok,actual:outs.map(v=>describe(v,actual[v.key])).join(" · ")};
+        }};
+    });
     el.innerHTML=`<div class="card tsec reveal"><div class="tsec-h"><h2>Check your model</h2><button class="btn" id="runall">${ic("playf",2)}Run all checks</button></div>
-        <p class="lead">Each check asks your model a question the problem already answers.</p>${teacherNote(p.steps.test)}
+        <p class="lead">Predict what should happen in each situation, then run the checks to compare with your blocks.</p>${teacherNote(p.steps.test)}
         <div class="tests" data-stagger>${T.map(testCard).join("")||`<p class="muted">This problem has no checks yet.</p>`}</div><div id="tfb" style="margin-top:2.2rem"></div></div>
       <div class="ex-btns" style="margin-left:0"><button class="btn back" id="back">${ic("arrowL",2.8)}Equation</button><button class="btn submit" id="nextb" disabled>Explain ${ic("arrowR",2.8)}</button></div>`;
     const gate=()=>{$("#nextb",el).disabled=!S.teacher&&!(T.length&&st.d.passed===T.length)};
-    const runAll=fresh=>{let n=0; T.forEach(t=>{const [ok,y,v]=t.f(); if(ok) n++; setTest(el,t.id,ok,`Your model says: <b>${Number.isFinite(y)?esc(showV(v,y)):"nothing yet"}</b>`)}); st.d.passed=n; st.d.passedOf=T.length; save();
+    const runAll=fresh=>{let n=0; T.forEach(t=>{const {ok,actual}=t.f(); if(ok) n++; setTest(el,t.id,ok,`Your model says: <b>${esc(actual)}</b>`)}); st.d.passed=n; st.d.passedOf=T.length; save();
       $("#tfb",el).innerHTML=n===T.length?`<div class="callout mint"><div><h4>All ${T.length} checks pass.</h4><p>Your model agrees with every value the problem gives.</p></div></div>`:
         `<div class="callout pink"><div><h4>${T.length-n} check${T.length-n>1?"s":""} failed.</h4><p>Go back to Build, fix the block that feeds that number, and run the checks again.</p></div></div>`;
       if(fresh&&n===T.length) celebrate($("#runall",el)); gate()};
@@ -243,8 +274,9 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
     const okAs=ASM.filter(a=>a.ok&&((st.d.def&&st.d.def.as)||[]).includes(a.k));
     explainShell(el,m,`
       <div class="result"><span class="k">Your model</span><span class="vsep"></span><span class="v ${res.length>14?"sm":""}">${esc(res)}</span></div>
+      ${scenarioResults(p,R)}
       ${teacherNote(p.steps.explain)}
-      <div class="erow"><span class="etag adv">Answer</span><div><p class="q">${esc(p.explain.prompt||p.question||"What does your model tell you?")}</p><textarea class="etext" id="ans" rows="2" placeholder="Use numbers from your model.">${esc(st.d.ans||"")}</textarea></div></div>
+      <div class="erow"><span class="etag adv">Answer</span><div><p class="q">${mathText(p.explain.prompt||p.question||"What does your model tell you?",p.vars)}</p><textarea class="etext" id="ans" rows="2" placeholder="Use numbers from your model.">${esc(st.d.ans||"")}</textarea></div></div>
       <div class="erow"><span class="etag why">Why?</span><textarea class="etext" id="why" rows="2" placeholder="How does your model support your answer?">${esc(st.d.why||"")}</textarea></div>
       <div class="erow"><span class="etag lim">Limitations</span><div>${okAs.length?`<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem">${okAs.map(a=>`<span class="pill easy aspill">${esc(a.t)}</span>`).join("")}</div>`:""}
         <textarea class="etext" id="lim" rows="2" placeholder="What does your model leave out? When might it be wrong?">${esc(st.d.lim||"")}</textarea></div></div>
