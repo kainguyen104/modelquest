@@ -38,7 +38,7 @@ assets/           mascot and scene artwork
 src/              source files that build.py joins into index.html
 build.py          the build script
 tests/            automated browser tests (Playwright)
-docs/             design notes for the Diagram and Equation steps, screenshots
+images/           images, website layouts, and visual design.
 shots/            where tests save screenshots (not committed)
 ```
 
