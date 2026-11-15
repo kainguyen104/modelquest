@@ -1,6 +1,7 @@
 <title>ModelQuest</title>
 <link rel="stylesheet" href="node_modules/katex/dist/katex.min.css">
 <script src="node_modules/katex/dist/katex.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800&amp;family=STIX+Two+Text:ital,wght@0,500;1,500&amp;display=swap">
 <style>
@@ -931,7 +932,7 @@ select.field.sm{appearance:none; -webkit-appearance:none; padding-right:3.6rem; 
 .dgintro{font:500 2.05rem/1.5 var(--font); color:var(--text2); max-width:112rem}
 .dgtn{margin-top:1.6rem}
 .dgbench{margin-top:2.4rem; padding:2.2rem 2.4rem 2.6rem; border-radius:3rem}
-.dgtop{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:1.4rem 2.6rem; align-items:center; padding-bottom:2rem; border-bottom:.22rem dashed #E3DAD3}
+.dgtop{display:grid; grid-template-columns:auto minmax(0,1fr); gap:1.4rem 2.6rem; align-items:center; padding-bottom:2rem; border-bottom:.22rem dashed #E3DAD3}
 .dgph{display:flex; gap:.6rem; list-style:none; margin:0; padding:0; flex-wrap:wrap}
 .dgpp{display:inline-flex; align-items:center; gap:.7rem; padding:.55rem 1.2rem .55rem .55rem; border:.22rem solid var(--ink); border-radius:999px; background:var(--white); font:800 1.65rem/1 var(--font); color:var(--text2)}
 button.dgpp{cursor:pointer}
@@ -946,8 +947,6 @@ button.dgpp{cursor:pointer}
 .dgok{width:3.4rem; height:3.4rem; border-radius:50%; background:var(--mint-done); border:.22rem solid var(--ink); display:inline-grid; place-items:center}
 .dgok svg{width:2rem; height:2rem}
 .dgagain{display:flex; align-items:center; gap:.7rem} .dgagain svg{width:2.1rem; height:2.1rem; flex:none}
-.dgans svg{width:2.2rem; height:2.2rem}
-.dgans[aria-pressed="true"]{background:var(--yellow-soft)}
 .dgbody{display:grid; grid-template-columns:33rem minmax(0,1fr); grid-template-areas:"side stage" "more stage"; grid-template-rows:auto 1fr; gap:2rem 2.6rem; margin-top:2.2rem; align-items:start}
 .dgside{grid-area:side; min-width:0} .dgstage{grid-area:stage; min-width:0} .dgmore{grid-area:more}
 .dgsh{display:flex; align-items:center; gap:1rem; margin-bottom:1.2rem}
@@ -1100,7 +1099,7 @@ body.dgdragging,body.dgdragging *{cursor:grabbing!important; user-select:none; -
 .smodel .dgstatic{margin-top:0}
 .sderr{margin-top:1.2rem; padding:1.2rem 1.4rem; border-radius:1.2rem; background:#FFF2F4; font:600 1.6rem/1.4 var(--font)} .sderr b{display:block; margin-bottom:.4rem}
 @media (max-width:900px){
-  .dgtop{grid-template-columns:1fr} .dgans{justify-self:start}
+  .dgtop{grid-template-columns:1fr}
   .dgbody{grid-template-columns:minmax(0,1fr); grid-template-areas:"side" "stage" "more"}
   .dgbody:not(.ph-place){grid-template-areas:"stage" "side" "more"}
   .dgtray{grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))}
@@ -1268,6 +1267,66 @@ body.dgdragging,body.dgdragging *{cursor:grabbing!important; user-select:none; -
 @keyframes typed{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 .goal.ok i{animation:navPop .4s cubic-bezier(.2,1.6,.4,1)}
 
+/* ---------- answer key (teacher mode): a button on every step; each answer is filled in on the page, one task at a time ---------- */
+body.akon main{padding-bottom:17rem}
+#akroot{position:fixed; right:calc(max(16px,2.4rem) + env(safe-area-inset-right,0px)); bottom:calc(max(16px,2.4rem) + env(safe-area-inset-bottom,0px)); z-index:80; display:flex; flex-direction:column; align-items:flex-end; pointer-events:none}
+#akroot[hidden]{display:none}
+#akbody{display:flex; flex-direction:column; align-items:flex-end} #akbody>*{pointer-events:auto}
+.aklive{position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.akfab{display:inline-flex; align-items:center; gap:1rem; height:6.2rem; padding:0 2.4rem 0 1.9rem; border:var(--bw) solid var(--ink); border-radius:999px; background:var(--lav); box-shadow:var(--sh); font:800 2.1rem/1 var(--font); color:var(--text); cursor:pointer; transition:transform .12s, box-shadow .12s}
+.akfab:hover{transform:translate(-.1rem,-.1rem); box-shadow:.5rem .6rem 0 var(--ink)}
+.akfab:active{transform:translate(.3rem,.4rem); box-shadow:.1rem .1rem 0 var(--ink)}
+.akfab:focus-visible,.akto:focus-visible,.akib:focus-visible{outline:.35rem solid var(--s1); outline-offset:.3rem}
+.akfab svg{width:2.8rem; height:2.8rem}
+.akc{padding:.45rem .8rem; border:.2rem solid var(--ink); border-radius:999px; background:var(--white); font:800 1.5rem/1 var(--font); font-variant-numeric:tabular-nums}
+.akpanel{width:max(44rem,360px); max-width:calc(100vw - 32px); max-height:calc(100vh - 15rem); max-height:calc(100dvh - 15rem); display:flex; flex-direction:column; background:var(--white); border:var(--bw) solid var(--ink); border-radius:2.4rem; box-shadow:.6rem .7rem 0 var(--ink); overflow:hidden; animation:akin .22s ease both}
+@keyframes akin{from{opacity:0; transform:translateY(1.4rem)}}
+.akhd{display:flex; align-items:center; gap:1.2rem; padding:1.2rem 1.3rem 1.2rem 1.5rem; background:var(--lav); border-bottom:var(--bw) solid var(--ink); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none} .akhd.drag{cursor:grabbing}
+.akchip{width:4.6rem; height:4.6rem; flex:none; display:grid; place-items:center; border:.25rem solid var(--ink); border-radius:1.3rem; background:var(--yellow-btn)} .akchip svg{width:2.7rem; height:2.7rem}
+.akht{flex:1; min-width:0; display:grid; gap:.35rem} .akht b{font:800 2.2rem/1.1 var(--font)} .akht small{font:600 1.5rem/1.25 var(--font); color:#4B4560}
+.akib{width:4.4rem; height:4.4rem; flex:none; display:grid; place-items:center; padding:0; border:.25rem solid var(--ink); border-radius:1.2rem; background:var(--white); box-shadow:.2rem .3rem 0 var(--ink); color:var(--text); cursor:pointer}
+.akib svg{width:2.2rem; height:2.2rem} .akib:hover{background:var(--yellow-soft)}
+.akprog{display:flex; align-items:center; gap:1.2rem; padding:1.1rem 1.6rem; border-bottom:.2rem solid #EEE6E1; font:700 1.6rem/1 var(--font); color:var(--text2); font-variant-numeric:tabular-nums}
+.akbar{flex:1; height:1.2rem; border:.2rem solid var(--ink); border-radius:999px; background:var(--track); overflow:hidden} .akbar i{display:block; height:100%; background:var(--mint); transition:width .25s}
+.aktasks{flex:1 1 auto; min-height:0; max-height:27vh; overflow:auto; overscroll-behavior:contain; list-style:none; margin:0; padding:.8rem .9rem; background:var(--card)}
+.akrow+.akrow{margin-top:.3rem}
+.akto{width:100%; display:flex; align-items:flex-start; gap:1rem; padding:.75rem .8rem; border:.2rem solid transparent; border-radius:1.2rem; background:none; text-align:left; cursor:pointer; font:600 1.7rem/1.3 var(--font); color:var(--text2)}
+.akto:hover:not([disabled]){background:#F6EFEA}
+.akto[disabled]{cursor:default}
+.akrow.done .akto{color:var(--text)}
+.akrow.next .akto{border-color:var(--ink); background:var(--yellow-soft); color:var(--text); font-weight:700}
+.akn{flex:none; width:3rem; height:3rem; display:grid; place-items:center; border:.22rem solid var(--ink); border-radius:50%; background:var(--white); font:800 1.45rem/1 var(--font); font-variant-numeric:tabular-nums}
+.akn svg{width:1.7rem; height:1.7rem} .akrow.done .akn{background:var(--mint-done)}
+.akt{flex:1; min-width:0; padding-top:.2rem; overflow-wrap:anywhere}
+.akt .mline{font-size:1.05em} .akt b{font-weight:800}
+.aktag{display:inline-block; vertical-align:.15em; margin-left:.3rem; padding:.3rem .7rem; border-radius:999px; background:var(--pink-soft); font:800 1.15rem/1 var(--font); font-style:normal; letter-spacing:.04em; text-transform:uppercase; color:#8A2E44}
+.aklast{display:flex; align-items:flex-start; gap:.9rem; margin:0; padding:1.1rem 1.5rem; border-top:.2rem solid #EEE6E1; background:var(--mint-result); font:600 1.6rem/1.4 var(--font); color:var(--text)}
+.aklast>svg{width:2.1rem; height:2.1rem; flex:none; margin-top:.1rem; color:#0E8C6E}
+.aklast b{font-weight:800}
+.aklnote{display:block; margin-top:.3rem; font-weight:500; color:var(--text2)}
+.aklast.busy{background:var(--yellow-soft); align-items:center}
+.akspin{width:2rem; height:2rem; flex:none; border:.3rem solid var(--ink); border-right-color:transparent; border-radius:50%; animation:akspin .8s linear infinite}
+@keyframes akspin{to{transform:rotate(360deg)}}
+.akempty{margin:1.6rem 1.8rem 2rem; font:600 1.8rem/1.4 var(--font); color:var(--text2)}
+.akft{display:flex; flex-wrap:wrap; gap:1rem; padding:1.2rem 1.3rem 1.3rem; border-top:.2rem solid #EEE6E1; background:var(--white)}
+.akft .btn.sm{font-size:1.75rem}
+.akft [data-aknext]{flex:1 1 auto}
+.akpanel.busy .akft .btn{opacity:.55}
+/* where an answer just went in */
+.akflash{animation:akflash 2s ease both; border-radius:1.6rem}
+@keyframes akflash{0%,55%{outline:.45rem solid #7C5CFF; outline-offset:.5rem; box-shadow:0 0 0 1.4rem rgba(124,92,255,.18)}100%{outline:.45rem solid rgba(124,92,255,0); outline-offset:.5rem; box-shadow:0 0 0 1.4rem rgba(124,92,255,0)}}
+@media (prefers-reduced-motion:reduce){.akflash{outline:.45rem solid #7C5CFF; outline-offset:.5rem}}
+/* Understand has nothing to fill in: its answers appear as a card under the brief */
+.aknotes{position:relative; z-index:3; margin:3rem 4.5rem 0 4.4rem; padding:2.6rem 3.2rem 3rem; border-radius:3rem; box-shadow:.4rem .6rem 0 var(--ink); background:var(--white)}
+.aknh{display:flex; align-items:center; gap:1.2rem; margin-bottom:1.4rem} .aknh b{font:800 2.6rem/1.1 var(--font)} .aknh small{font:600 1.7rem/1 var(--font); color:var(--text3)}
+.aknl{margin:0; padding-left:2.6rem; display:grid; gap:1.6rem} .aknl li{font:500 2.1rem/1.45 var(--font)} .aknl li::marker{font-weight:800}
+.aknl li>b{font-weight:800}
+.aknb{margin-top:.5rem} .aknb>*+*{margin-top:.8rem}
+.akul{margin:0; padding-left:2.4rem} .akul li+li{margin-top:.5rem}
+.akkv{display:grid; grid-template-columns:minmax(0,auto) minmax(0,1fr); gap:.6rem 1.8rem; margin:0; align-items:baseline}
+.akkv dt{font-weight:700; color:var(--text2)} .akkv dd{margin:0}
+.akmeta{font-weight:600; font-size:.88em; color:var(--text3)}
+.aklab{font:800 1.4rem/1.2 var(--font); letter-spacing:.06em; text-transform:uppercase; color:var(--text3)}
 /* ---------- responsive ---------- */
 @media (max-width:900px){
   html{font-size:7.6px}
@@ -1356,5 +1415,13 @@ body.dgdragging,body.dgdragging *{cursor:grabbing!important; user-select:none; -
 @media (max-width:340px){.brand{font-size:0; gap:0} .steps-c .lab,.steps-c.lg .lab{font-size:1.12rem; padding:.3rem .25rem; letter-spacing:-.01em} .steps-c .on .lab,.steps-c.lg .on .lab{padding:.3rem .4rem}}
 @media (max-width:400px){body.teacher .brand{font-size:2rem} body.teacher .navlink svg{width:3.2rem; height:3.2rem}}
 @media (max-width:372px){body.teacher .brand{font-size:0; gap:0}}
+@media (max-width:560px){
+  #akroot{left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); bottom:calc(8px + env(safe-area-inset-bottom,0px)); align-items:stretch}
+  .akfab{height:5.8rem; font-size:2rem}
+  .akpanel{align-self:stretch; width:auto; max-width:none; max-height:56vh; max-height:56dvh}
+  .aktasks{max-height:22vh}
+  .akhd{cursor:default}
+}
+@media (max-width:900px){.aknotes{margin:3rem 0 0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
 </style>

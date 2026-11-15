@@ -36,6 +36,13 @@ module.exports=async(p,H)=>{
   await p.locator('.icard h1').waitFor();
   assert.equal(await p.locator('.icard h1').innerText(),'Lemonade stand profit');
   assert.equal(await p.locator('.icard .top p').innerText(),'Maya runs a lemonade stand at the school fair. How many cups must she sell to break even?');
+  await p.getByRole('button',{name:'Show answers'}).click();
+  await p.getByRole('button',{name:'Show all',exact:true}).click();
+  await p.locator('.aknotes li[data-n="3"]').waitFor();
+  assert.match(await p.locator('.aknotes').innerText(),/profit = \$51/);
+  await p.getByRole('button',{name:'Undo',exact:true}).click();
+  assert.equal(await p.locator('.aknotes').count(),0);
+  await p.getByRole('button',{name:'Close the answer key'}).click();
   await p.locator('.icard [data-prob]').click();
   const info=p.getByRole('dialog');
   assert.deepEqual(await info.locator('.imported-facts dd').allTextContents(),['$15','$0.40','$1.50']);
@@ -51,7 +58,9 @@ module.exports=async(p,H)=>{
   await p.goto('file://'+ROOT+'/index.html#workspace'); await p.waitForTimeout(500); console.log('workspace list:',await p.$$eval('.prow b',b=>b.map(x=>x.textContent).join(' / ')));
   await H.shot('tm_ws_list',true);
   // ---- a student arrives
-  await p.evaluate(()=>{localStorage.setItem("mock.user",JSON.stringify({id:"u_s1",name:"Sam Lee",canEdit:false})); localStorage.removeItem("modelquest.v4"); localStorage.removeItem("modelquest.ws.unsaved")}); await p.waitForTimeout(1500);
+  // (the teacher's page stays open until the reload, so stop it writing its state back: the student is someone else, on their own device)
+  await p.evaluate(()=>{localStorage.setItem("mock.user",JSON.stringify({id:"u_s1",name:"Sam Lee",canEdit:false})); localStorage.removeItem("modelquest.v4"); localStorage.removeItem("modelquest.ws.unsaved");
+    const set=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){if(this===localStorage&&(k==="modelquest.v4"||k==="modelquest.ws.unsaved")) return; return set.call(this,k,v)}}); await p.waitForTimeout(1500);
   await p.goto('file://'+ROOT+'/index.html#challenges'); await p.reload(); await p.waitForTimeout(800);
   console.log('student nav:',await p.evaluate(()=>[...document.querySelectorAll('.navlink')].filter(b=>getComputedStyle(b).display!=="none").map(b=>b.textContent.trim()).join(' | ')));
   console.log('teacher problems shown:',await p.$$eval('.ccard.custom h3',h=>h.map(x=>x.textContent).join(' / ')));
@@ -93,8 +102,9 @@ module.exports=async(p,H)=>{
   console.log('student could read keys?',await p.evaluate(async()=>{const db=await window.claude.use("db"); const s=await db.doc("keys/"+location.hash.slice(3)).get(); return s.exists}));
   await p.goto('file://'+ROOT+'/index.html#options'); await p.waitForTimeout(400); console.log('sync card:',(await p.textContent('.synccard')).replace(/\s+/g,' '));
   // ---- back to the teacher
-  await p.evaluate(()=>{localStorage.setItem("mock.user",JSON.stringify({id:"u_teacher",name:"Ms. Rivera",canEdit:true,isOwner:true})); localStorage.removeItem("modelquest.v4")}); await p.waitForTimeout(1500);
-  await p.goto('file://'+ROOT+'/index.html#class'); await p.reload(); await p.waitForTimeout(1200);
+  await p.evaluate(()=>{localStorage.setItem("mock.user",JSON.stringify({id:"u_teacher",name:"Ms. Rivera",canEdit:true,isOwner:true})); localStorage.removeItem("modelquest.v4");
+    const set=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){if(this===localStorage&&k==="modelquest.v4") return; return set.call(this,k,v)}}); await p.waitForTimeout(1500);
+  await p.goto('file://'+ROOT+'/index.html#class'); await p.reload(); await p.waitForSelector('.sname',{timeout:10000}).catch(()=>{}); await p.waitForTimeout(300);
   console.log('class names:',await p.$$eval('.sname',b=>b.map(x=>x.textContent).join(', ')),'| columns:',await p.$$eval('.hm thead th',t=>t.map(x=>x.textContent).join(' | ')));
   await H.shot('tm_class',true);
   await p.click('.sname'); await p.waitForTimeout(300); const sm=p.locator('[data-sm]').last(); await sm.click(); await p.waitForTimeout(200); await H.shot('tm_class_student');

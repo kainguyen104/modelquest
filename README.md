@@ -26,7 +26,7 @@ Opened this way, the app runs in **local mode**: every mission works and progres
 |---|---|
 | ![Diagram step](images/diagram-step.png) | ![Build step](images/build-step.png) |
 
-**Teacher tools:** a live class dashboard, a problem editor, and AI help to draft new problems from a topic or an uploaded worksheet. Teacher-made problems run through the same seven steps, generated from the teacher's formulas.
+**Teacher tools:** a live class dashboard, a problem editor, AI help to draft new problems from a topic or an uploaded worksheet, and an answer key on every step: in teacher mode, each press of **Show answers** fills the next task's answer into the step itself (fields, diagram, blocks, equations), so the class can watch the graph redraw or the fire run, and **Undo** puts the page back. Teacher-made problems run through the same seven steps, generated from the teacher's formulas.
 
 ![Teacher dashboard](images/teacher-dashboard.png)
 
@@ -53,6 +53,7 @@ shots/            where tests save screenshots (not committed)
 | `src/j7_cloud.js` | Database and sign-in layer, formula parser, AI calls |
 | `src/j7b_custom.js` | Turns teacher problems into missions |
 | `src/j7d_equation.js`, `src/j7e_diagram.js` | The Equation and Diagram steps |
+| `src/j7f_answers.js` | The teacher's answer key: fills each task's answer into the step, one at a time, with Undo |
 | `src/j7c_teacher.js` | Teacher dashboard, workspace and editor |
 | `src/j8_motion.js` | Animations (all skipped under reduced motion) |
 | `src/j9_boot.js` | Starts the app |
@@ -120,6 +121,7 @@ To run shared class features on your own hosting, replace the data and identity 
 
 - [Diagram step](diagram-step.md)
 - [Equation step](equation-step.md)
+- [Answer key](answer-key.md)
 
 ## Acknowledgements
 

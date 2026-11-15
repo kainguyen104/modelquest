@@ -120,9 +120,9 @@ function diagramStep(el,m,st,ctx,spec){
   const pipeOK=p=>{const i=D.pipe[p.f]; return i!=null&&!!(p.opts[i]&&p.opts[i].ok)}, qOK=q=>{const i=D.q[q.id]; return i!=null&&!!(q.opts[i]&&q.opts[i].ok)};
   const OK={place:()=>N.every(n=>D.pl[n.id])&&X.every(x=>D.ex[x.id]),pipes:()=>pipes.every(pipeOK),links:()=>links.every(l=>has(l.a,l.b)),read:()=>why.every(qOK)};
   const PH=[]; if(spec.sort!==false) PH.push("place"); if(pipes.length) PH.push("pipes"); if(links.length) PH.push("links"); if(why.length) PH.push("read");
-  let forced=null, showAns=false, picked=null, srcSel=null, qNow=null, BUB=null, lay=null, prevKeys=null, DR=null, justDragged=false, bubT=0, flashT=0, wasDone=!!D.done;
-  const phase=()=>showAns?"done":forced||PH.find(k=>!OK[k]())||"done";
-  const past=k=>{const p=phase(); return showAns||p==="done"||(PH.indexOf(k)>=0&&PH.indexOf(p)>PH.indexOf(k))};
+  let forced=null, picked=null, srcSel=null, qNow=null, BUB=null, lay=null, prevKeys=null, DR=null, justDragged=false, bubT=0, flashT=0, wasDone=!!D.done;
+  const phase=()=>forced||PH.find(k=>!OK[k]())||"done";
+  const past=k=>{const p=phase(); return p==="done"||(PH.indexOf(k)>=0&&PH.indexOf(p)>PH.indexOf(k))};
   const placed=k=>!!(D.pl[k]||past("place")), exOn=k=>!!(D.ex[k]||past("place")), laid=p=>pipeOK(p)||past("pipes");
   const drawnLinks=()=>past("links")?links.map(l=>[l.a,l.b]):Object.keys(D.ln).reduce((a,b)=>a.concat((D.ln[b]||[]).map(s=>[s,b])),[]);
   const hash=s=>String(s).split("").reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7)%997;
@@ -131,8 +131,7 @@ function diagramStep(el,m,st,ctx,spec){
   const bump=()=>{st.runs=(st.runs||0)+1};
   el.innerHTML=`<div class="dgstep">${spec.intro?`<p class="lead dgintro">${spec.intro}</p>`:""}${spec.note?`<div class="dgtn">${teacherNote(spec.note)}</div>`:""}
     <div class="card dgbench" id="dgb">
-      <div class="dgtop"><ol class="dgph" id="dgph" aria-label="Diagram tasks"></ol><div class="dgtask" id="dgtask" aria-live="polite"></div>
-        ${S.teacher?`<button type="button" class="btn sm white dgans" id="dgans" aria-pressed="false">${ic("eye",2.3)}<span>Show the answer</span></button>`:""}</div>
+      <div class="dgtop"><ol class="dgph" id="dgph" aria-label="Diagram tasks"></ol><div class="dgtask" id="dgtask" aria-live="polite"></div></div>
       <div class="dgbody">
         <div class="dgside"><div class="dgqslot" id="dgqslot"></div><div id="dgside"></div></div>
         <div class="dgstage">${spec.clock?`<div class="dgsthd"><button type="button" class="dgclock" id="dgclock" data-drop="clock"></button></div>`:""}
@@ -146,7 +145,7 @@ function diagramStep(el,m,st,ctx,spec){
   const alive=()=>document.body.contains(bench), uid="dgp"+(++DGID), narrow=()=>cv.clientWidth<600, twoCol=()=>!matchMedia("(max-width:900px)").matches;
 
   /* drawing the canvas */
-  function draw(){const L=dgLayoutFor(spec,cv.clientWidth||900); lay=L; const [W,H]=L.vb, ph=phase(), G=dgGeo(spec,L,()=>true), act=!showAns&&ph!=="done", linking=act&&ph==="links";
+  function draw(){const L=dgLayoutFor(spec,cv.clientWidth||900); lay=L; const [W,H]=L.vb, ph=phase(), G=dgGeo(spec,L,()=>true), act=ph!=="done", linking=act&&ph==="links";
     const lk=drawnLinks(), keys=new Set([...N.filter(n=>placed(n.id)).map(n=>"n:"+n.id),...pipes.filter(laid).map(p=>"p:"+p.f),...lk.map(([a,b])=>"l:"+a+">"+b),...X.filter(x=>exOn(x.id)).map(x=>"x:"+x.id)]);
     const fresh=new Set(); if(prevKeys&&!still()) keys.forEach(k=>{if(!prevKeys.has(k)) fresh.add(k)}); prevKeys=keys;
     const fr=k=>fresh.has(k)?" dgnew":"", atS=new Set([BUB&&BUB.at,info.hidden?null:info.dataset.k].filter(Boolean)), F=k=>atS.has(k);
@@ -171,7 +170,6 @@ function diagramStep(el,m,st,ctx,spec){
   /* the bar on top: tasks, what to do now, progress */
   function count(k){return k==="place"?[N.filter(n=>D.pl[n.id]).length+X.filter(x=>D.ex[x.id]).length,N.length+X.length]:k==="pipes"?[pipes.filter(pipeOK).length,pipes.length]:k==="links"?[links.filter(l=>has(l.a,l.b)).length,links.length]:[why.filter(qOK).length,why.length]}
   function taskHTML(){const ph=phase();
-    if(showAns) return `<h3>The answer</h3><p>This is the finished diagram. Press <b>Show my diagram</b> to go back to the activity.</p>`;
     if(ph==="done") return `<h3>${DGTT.done} <span class="dgok">${ic("check",2.6)}</span></h3><p>${spec.toCode?rich(spec.toCode,spec.SY||{}):"Each flow or converter with arrows into it becomes a set block, and the arrows tell you which variables go into it."}</p><p class="dgagain">${ic("doc",2)}<span>You can open your diagram again from <b>Problem info</b> while you build.</span></p>`;
     const [a,b]=count(ph), ext=X.some(x=>x.to!=="clock"), tap=matchMedia("(hover:none)").matches;
     const txt={place:spec.placeLead||`Drag each card onto the diagram${tap?" (or tap a card, then tap where it goes)":""}: a stock into a box, a flow into a valve, a converter into a circle.${clockX?" The card that ticks goes on the clock"+(ext?", and a starting value goes inside its box.":"."):""}`,
@@ -179,13 +177,13 @@ function diagramStep(el,m,st,ctx,spec){
       links:spec.linksLead||`Drag from a quantity to the flow or converter it helps work out${tap?" (or tap one, then the other)":""}. A blue connector appears when it's right.`,
       read:spec.readLead||`Your diagram is built. ${tap?"Tap":"Hover over"} any part to read about it. Each question is about the part ringed in the diagram.`}[ph];
     return `<h3>${DGTT[ph]} <span class="dgprog">${a} of ${b}</span></h3><p>${txt}</p>`}
-  function phHTML(){const ph=phase(); return PH.map((k,i)=>{const done=OK[k](), on=k===ph&&!showAns, inner=`<span class="dgpn">${done?ic("check",2.8):i+1}</span><span>${DGTS[k]}</span>`;
+  function phHTML(){const ph=phase(); return PH.map((k,i)=>{const done=OK[k](), on=k===ph, inner=`<span class="dgpn">${done?ic("check",2.8):i+1}</span><span>${DGTS[k]}</span>`;
     return `<li>${S.teacher?`<button type="button" class="dgpp ${done?"ok":""} ${on?"on":""}" data-ph="${k}" aria-current="${on?"step":"false"}">${inner}</button>`:`<span class="dgpp ${done?"ok":""} ${on?"on":""}" ${on?'aria-current="step"':""}>${inner}</span>`}</li>`}).join("")}
 
   /* the side: cards to place, then a record of the diagram so far */
   function cardHTML(k){const n=nd(k)||xd(k); return `<button type="button" class="dgcard ${picked===k?"picked":""}" data-card="${esc(k)}" aria-pressed="${picked===k}"><span class="dgck">${esc(n.lab)}</span><span class="dgcd">${esc(n.desc||"")}${n.unit?` <i>(${esc(n.unit)})</i>`:""}</span></button>`}
   function sideHTML(){const ph=phase();
-    if(ph==="place"&&!showAns){const left=order.filter(k=>nd(k)?!D.pl[k]:!D.ex[k]);
+    if(ph==="place"){const left=order.filter(k=>nd(k)?!D.pl[k]:!D.ex[k]);
       return `<div class="dgsh"><h4>${ic("hand",2.4)}Cards</h4><span class="dgcnt">${left.length} left</span></div><div class="dgtray">${left.map(cardHTML).join("")}</div>
         ${picked?`<p class="dgpick">${ic("arrowRt",2.2)}<span>Now tap where <b>${lab(picked)}</b> goes. Tap the card again to put it back.</span></p>`:""}`}
     let h=`<div class="dgsh"><h4>${ic("diagram",2.4)}Your diagram</h4></div>`;
@@ -193,7 +191,7 @@ function diagramStep(el,m,st,ctx,spec){
     if(pipes.length) h+=`<div class="dgnt"><span class="dgnk">Pipes</span><ul>${pipes.map(p=>{const ok=laid(p), cur=qNow&&qNow.kind==="pipe"&&qNow.id===p.f;
       return `<li><button type="button" class="dgnq ${ok?"ok":""} ${cur?"cur":""}" data-nq="${esc(p.f)}" data-nk="pipe" ${!ok&&phase()!=="pipes"?"disabled":""}><b>${lab(p.f)}</b>${ok?`: ${p.a==="cloud"?"outside":lab(p.a)} → ${p.b==="cloud"?"outside":lab(p.b)}`:": which way?"}</button></li>`}).join("")}</ul></div>`;
     if(links.length){const got=drawnLinks(); h+=`<div class="dgnt"><span class="dgnk">Connectors <span class="dgcnt">${got.length} of ${links.length}</span></span>${got.length?`<ul>${got.map(([a,b])=>`<li class="dgnl" data-hk="${esc(a+">"+b)}">${lab(a)} → ${lab(b)}</li>`).join("")}</ul>`:`<p class="muted">None yet.</p>`}</div>`}
-    if(why.length) h+=`<div class="dgnt"><span class="dgnk">Questions</span><div class="dgqd">${why.map((q,i)=>{const ok=qOK(q), cur=qNow&&qNow.kind==="read"&&qNow.id===q.id, open=ok||phase()==="read"||showAns||phase()==="done";
+    if(why.length) h+=`<div class="dgnt"><span class="dgnk">Questions</span><div class="dgqd">${why.map((q,i)=>{const ok=qOK(q), cur=qNow&&qNow.kind==="read"&&qNow.id===q.id, open=ok||phase()==="read"||phase()==="done";
       return `<button type="button" class="dgnq dot ${ok?"ok":""} ${cur?"cur":""}" data-nq="${esc(q.id)}" data-nk="read" ${open?"":"disabled"} aria-label="Question ${i+1}${ok?", answered":""}">${ok?ic("check",2.6):i+1}</button>`}).join("")}</div></div>`;
     return h}
   function paintClock(){if(!clockB) return; const on=!clockX||exOn(clockX.id), c=spec.clock;
@@ -280,11 +278,11 @@ function diagramStep(el,m,st,ctx,spec){
 
   /* paint everything */
   function hints(){const ph=phase(), hz=$("#dghz",el), H=spec.hints||{}, list=ph==="place"?H.sort:ph==="pipes"?H.pipes:ph==="links"?H.links:null;
-    goalHints(hz,st,showAns||!list?null:{k:"dg-"+ph,hints:list})}
+    goalHints(hz,st,!list?null:{k:"dg-"+ph,hints:list})}
   function refresh(){const G=PH.map(k=>({k:"dg-"+k,t:DGTT[k],ok:OK[k]()})); trackGoals(st,G); const all=G.every(g=>g.ok);
     if(all&&!D.done){D.done=true; save()} const nb=$("#nextb",el); if(nb) nb.disabled=!S.teacher&&!all;
     if(all&&!wasDone){wasDone=true; setTimeout(()=>{if(alive()) celebrate($("#dgtask .dgok",el)||$("#dgtask",el),30)},60)}}
-  function paint(scroll){$(".dgbody",el).classList.toggle("ph-place",phase()==="place"&&!showAns); $("#dgph",el).innerHTML=phHTML(); $("#dgtask",el).innerHTML=taskHTML(); side.innerHTML=sideHTML(); paintClock(); draw(); hints(); refresh();
+  function paint(scroll){$(".dgbody",el).classList.toggle("ph-place",phase()==="place"); $("#dgph",el).innerHTML=phHTML(); $("#dgtask",el).innerHTML=taskHTML(); side.innerHTML=sideHTML(); paintClock(); draw(); hints(); refresh();
     if(BUB) placeBub(scroll); if(!info.hidden&&info.dataset.k) showInfo(info.dataset.k); hydrateIcons(bench)}
 
   /* questions on the diagram: one at a time, at the part they're about */
@@ -366,7 +364,7 @@ function diagramStep(el,m,st,ctx,spec){
   function onUp(e){if(!DR||e.pointerId!==DR.pid) return; const D0=end(); if(!D0||!D0.on) return; justDragged=true; setTimeout(()=>{justDragged=false},0); rest=[e.clientX,e.clientY];
     if(!D0.t){if(D0.kind==="link") paint(); return} if(D0.kind==="card") dropCard(D0.id,D0.t); else tryLink(D0.id,D0.t.dataset.n)}
   function onCancel(e){if(DR&&e.pointerId===DR.pid){end(); paint()}}
-  bench.addEventListener("pointerdown",e=>{if(e.button>0||showAns||DR) return; const card=e.target.closest(".dgcard"), node=!card&&phase()==="links"?e.target.closest("[data-n]"):null; if(!card&&!node) return;
+  bench.addEventListener("pointerdown",e=>{if(e.button>0||DR) return; const card=e.target.closest(".dgcard"), node=!card&&phase()==="links"?e.target.closest("[data-n]"):null; if(!card&&!node) return;
     DR={kind:card?"card":"link",id:card?card.dataset.card:node.dataset.n,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,on:false,src:card||node,pid:e.pointerId,t:null};
     addEventListener("pointermove",onMove,{passive:false}); addEventListener("pointerup",onUp); addEventListener("pointercancel",onCancel)});
 
@@ -375,11 +373,8 @@ function diagramStep(el,m,st,ctx,spec){
     const bq=t.closest("[data-bq]"); if(bq){answer(+bq.dataset.bq); return}
     if(t.closest("[data-bnext]")){nextQ(); return}
     if(t.closest("[data-bclose]")){setBub(null); draw(); return}
-    const pp=t.closest("[data-ph]"); if(pp&&S.teacher){const k=pp.dataset.ph; forced=k===PH.find(x=>!OK[x]())?null:k; showAns=false; srcSel=null; picked=null; openPhase(); return}
+    const pp=t.closest("[data-ph]"); if(pp&&S.teacher){const k=pp.dataset.ph; forced=k===PH.find(x=>!OK[x]())?null:k; srcSel=null; picked=null; openPhase(); return}
     const nq=t.closest("[data-nq]"); if(nq&&!nq.disabled){openQ(nq.dataset.nk,nq.dataset.nq); return}
-    if(t.closest("#dgans")){showAns=!showAns; const b=$("#dgans",el); b.setAttribute("aria-pressed",showAns); b.lastChild.textContent=showAns?"Show my diagram":"Show the answer"; picked=null; srcSel=null;
-      if(showAns){setBub(null); paint()} else openPhase(); return}
-    if(showAns) return;
     const card=t.closest(".dgcard"); if(card){const k=card.dataset.card; picked=picked===k?null:k; setBub(null); paint(); const again=$(`.dgcard[data-card="${CSS.escape(k)}"]`,el); if(again) again.focus({preventScroll:true}); return}
     const zone=t.closest("[data-start],[data-slot],[data-drop]"); if(zone&&picked){dropCard(picked,zone); return}
     const n=t.closest("[data-n]");

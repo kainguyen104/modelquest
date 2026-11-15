@@ -12,7 +12,7 @@ if(require.main===module)(async()=>{
   const w=+(process.env.W||1448), hgt=+(process.env.HH||1086);
   const ctx=await b.newContext({viewport:{width:w,height:hgt},deviceScaleFactor:1,reducedMotion:'reduce',hasTouch:!!process.env.TOUCH,isMobile:!!process.env.TOUCH});
   const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push('PAGEERR '+e.message+' @ '+(e.stack||'').split('\n').slice(1,4).join(' | '))); p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
-  H.open=async(hash,state)=>{await p.addInitScript(st=>{try{if(window.name!=='mqinit'){localStorage.clear(); if(st) localStorage.setItem('modelquest.v4',JSON.stringify(st)); window.name='mqinit'}}catch(e){}},state||null);
+  H.open=async(hash,state)=>{await p.addInitScript(st=>{try{if(!localStorage.getItem('__mqinit')&&!sessionStorage.getItem('mqinit')&&window.name!=='mqinit'){localStorage.clear(); if(st) localStorage.setItem('modelquest.v4',JSON.stringify(st)); localStorage.setItem('__mqinit','1'); sessionStorage.setItem('mqinit','1'); window.name='mqinit'}}catch(e){}},state||null);
     await p.goto('file://'+ROOT+'/index.html#'+hash); await p.evaluate(()=>document.fonts.ready); await p.waitForTimeout(400)};
   H.shot=async(name,full)=>{await p.screenshot({path:`${ROOT}/shots/${name}.png`,fullPage:!!full})};
   H.errs=errs;

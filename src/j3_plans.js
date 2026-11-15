@@ -307,7 +307,7 @@ MISSIONS.plans={
   },
   (el,st,ctx)=>{
     const V=VARS(st), R=modelRunner(V,st.d.prog||{body:[]}), v=(k,g,n=1)=>R.at({g,n}).v[k];
-    let cross=null; for(let g=0;g<=30.0001;g+=0.01){const a=v("cost_A",g),b=v("cost_B",g); if(!Number.isFinite(a)||!Number.isFinite(b)) break; if(a>=b){cross=[Math.round(g*100)/100,a]; break}}
+    let cross=null; for(let i=0;i<=3000;i++){const g=i/100, a=v("cost_A",g),b=v("cost_B",g); if(!Number.isFinite(a)||!Number.isFinite(b)) break; if(a>=b-1e-9){cross=[g,a]; break}}
     const asl={tax:"Taxes and fees",cap:"Same data every month",dev:"Phone payments"};
     const PL=[["","— choose a plan —"],["A","Plan A"],["B","Plan B"],["F","Family plan"]];
     explainShell(el,MISSIONS.plans,`
@@ -334,4 +334,43 @@ const ASM=[{k:"fee",t:"Each plan charges a monthly fee plus a price for each GB"
   {k:"use",t:"How much data she uses doesn't matter",ok:false,why:"Data use is the input g. The whole model is about how the cost changes with it."},
   {k:"rise",t:"Prices will go up next year",ok:false,why:"Nothing in the brief says prices change. Leave that out of this model."}];
 MISSIONS.plans.eq=EQ; MISSIONS.plans.dg=DG;
+/* ---- answer key (teacher mode): each task fills its answer into the step. Diagram and Equation answers come from DG and EQ. ---- */
+akLazy(MISSIONS.plans,()=>{const v=BK.v, op=BK.op;
+  // the Build answers, one task each, in program order
+  const REF=[()=>[BK.set("cost_A",op("add",v("fixed_A"),op("mul",v("rate_A"),v("g"))))],
+    ()=>[BK.set("cost_B",op("add",v("fixed_B"),op("mul",v("rate_B"),v("g"))))],
+    ()=>[BK.plot("cost_A","g"),BK.plot("cost_B","g")],
+    ()=>[BK.ifelse(op("lt",v("cost_A"),v("cost_B")),[BK.say("Plan A")],[BK.say("Plan B")])],
+    ()=>[BK.set("total",op("add",op("add",v("base_F"),op("mul",v("line_F"),v("n"))),op("mul",v("gb_F"),op("mul",v("n"),v("g"))))),BK.set("family_each",op("div",v("total"),v("n")))],
+    ()=>[BK.plot("family_each","g")]];
+  const MODEL=["prog","tasks","mine","view"];
+  const build=(st,upto)=>{const d=st.d; d.prog={body:[].concat(...REF.slice(0,upto+1).map(f=>f()))}; d.tasks=d.tasks||{};
+    if(upto>=3) d.tasks.cheaper=true; if(upto>=4){d.tasks.family=true; d.mine=d.mine||[]; if(!d.mine.includes("total")) d.mine.push("total")} d.view=d.view||{g:8,n:4}};
+  // later steps run the model, so they put the full answer in first if the one on the page doesn't work
+  const works=st=>{const d=st.d; if(!d.prog||!d.tasks||!d.tasks.family) return false; try{return checks(st,modelRunner(VARS(st),d.prog)).every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)) build(st,REF.length-1)}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  const def=st=>st.d.def||(st.d.def={});
+  return {
+  0:()=>[
+    {t:"What's the question?",html:akP("Is the cousin right that Plan B is cheaper? Which plan costs less, and does the answer change with how much data she uses? In Build, her mom adds a second question: should the family of four share a family plan?")},
+    {t:"What do we know?",html:akKV([["Plan A","$20 a month + $8 per GB"],["Plan B","$45 a month + $3 per GB"],["Her data","about 8 GB a month"],["Family plan <span class='akmeta'>arrives in Build</span>","$40 a month + $10 per line + $4 per GB anyone uses"]])},
+    {t:"What will the model work out?",html:akP("Each plan's bill for the month, in $, for any amount of data <b>g</b>, in GB: <b>cost_A</b> and <b>cost_B</b>. Later, <b>family_each</b>: what each person pays when <b>n</b> people share the family plan.")},
+    {t:"Where the class should end up",html:akP("The two bills are equal at <b>5 GB</b>, where both are <b>$60</b>. Below 5 GB Plan A is cheaper, and above it Plan B is. At 8 GB Plan A is $84 and Plan B is $69, so the cousin is right for her. A family of four using 8 GB each pays <b>$52 each</b> on the family plan, less than either plan on its own.")}],
+  1:()=>[
+    {t:"Units for g and C",keys:["def"],target:"#d-ug",apply:st=>{const d=def(st); d.ug="GB per month"; d.uc="$ per month"}},
+    {t:"Plan A's numbers",keys:["def"],target:"#w-fA",apply:st=>{const d=def(st); d.fA="20"; d.rA="8"}},
+    {t:"Plan B's numbers",keys:["def"],target:"#w-fB",apply:st=>{const d=def(st); d.fB="45"; d.rB="3"}},
+    {t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the two it doesn't."}],
+  3:()=>["Build <b>cost_A</b>: Plan A's bill when someone uses g GB","Build <b>cost_B</b> the same way for Plan B","Plot <b>cost_A</b> and <b>cost_B</b> against <b>g</b>",
+      "Say <b>Plan A</b> or <b>Plan B</b>, whichever is cheaper at any g","Build <b>family_each</b>: what each person pays on the family plan","Plot <b>family_each</b> against <b>g</b>"].map((t,i)=>({t,tag:i>=3?"new task":"",keys:MODEL,target:i===2||i===5?".studio .gpanel":"#cv",
+      apply:st=>build(st,i),note:["Check: slide g to 0 and the console says cost_A = $20.","Check: at g = 5 the console says cost_B = $60.","The lines cross at g = 5 GB, where both bills are $60. Close the pop-up to see the next task.",
+        "Slide g to 2, then to 9: it says “Plan A”, then “Plan B”. Close the pop-up to see the family task.","The new variable <b>total</b> is made in Variables first. Check: at n = 4 and g = 5, family_each = $40.","At n = 4 and g = 8 the family line, $52, is the lowest."][i]})),
+  5:()=>[
+    {t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"All four pass: $20 at 0 GB, $60 for Plan B at 5 GB, both plans $60 at 5 GB, and the family price drops from $70 to $40."},
+    {t:"Bug hunt: the flat-fee fumble",keys:["b1","b2","bugOK"],target:"#bw1",apply:st=>{st.d.b1="8"; st.d.b2="20"},note:"At 0 GB the classmate's model says $8, but the bill is $20: the 20 and the 8 swapped roles."}],
+  6:()=>[
+    {t:"Advice for your cousin, 8 GB a month",keys:withModel(["a1"]),target:"#a1",apply:st=>{ensure(st); st.d.a1="B"},note:"Plan B: $69 a month, against $84 for Plan A."},
+    {t:"Advice for the family of four, 8 GB each",keys:["a2"],target:"#a2",apply:st=>{st.d.a2="F"},note:"The family plan: $52 each."},
+    {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why="Plan B costs $25 more to start, but each GB is $5 cheaper, so the bills meet at 25 ÷ 5 = 5 GB, where both are $60. Above 5 GB Plan B is cheaper: at 8 GB it's $69 against $84. On the family plan the four of them share the account fee, so at 8 GB each it's $52 per person."},note:"A sample answer. Look for the break-even point and the two bills at 8 GB."},
+    {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim="Taxes and fees are left out. Her data use changes from month to month: in a month under 5 GB, Plan A would be cheaper. Paying off the phone is left out, and the family plan assumes everyone uses the same amount of data."},note:"A sample answer."}]}});
 })();

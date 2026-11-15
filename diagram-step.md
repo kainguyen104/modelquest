@@ -59,7 +59,7 @@ Their models are closed-form formulas, so the diagram is drawn automatically as 
 
 ## Code
 
-- `v2/j7e_diagram.js`: shared drawing (`dgGeo`, `dgCurve`, `dgSVG`, `dgStatic`), `dgNorm`, `dgViewOf`, `dgErrList`, the workbench `diagramStep`, and `autoDgSpec` for teacher problems.
+- `src/j7e_diagram.js`: shared drawing (`dgGeo`, `dgCurve`, `dgSVG`, `dgStatic`), `dgNorm`, `dgViewOf`, `dgErrList`, the workbench `diagramStep`, and `autoDgSpec` for teacher problems.
 - Specs: `const DG={…}` in `j3_plans.js`, `j4_decay.js`, `j5_fire.js` (`MISSIONS.x.dg`): nodes, `extras` (cards with `to:"clock"` or `to:<stock>`), pipes with questions, links, `why` questions with an `at` key (node id, `"a>b"`, `"start:id"`, `"clock"`), hints, and a wide and a `tall` layout.
 - Styles: the "diagram step (stock-and-flow, built by drag and drop)" block in `p1_head.html`.
-- Tests (`tests/`): `dg2_flow.js` (full drag flow with one mistake of each kind), `dgsolve.js` (finishes the step by keyboard from the page's own spec; used by the e2e tests and `t_mock.js`), `dg2_solve.js`, `dg2_phone.js` (touch, 390 px), `dg2_place.js` and `dg2_explore.js` (where each question lands), `dg2_teacher.js`, `dg_teacher.js`, `dg_migrate.js`, `dg_hint.js`, `dg_vis.js`, `dg_auto.js`.
+- Tests (`tests/`): `dg2_flow.js` (full drag flow with one mistake of each kind), `dgsolve.js` (finishes the step by keyboard from the page's own spec; used by the e2e tests and `t_mock.js`), `dg2_solve.js`, `dg2_phone.js` (touch, 390 px), `dg2_teacher.js`, `dg_teacher.js`, `dg_migrate.js`, `dg_hint.js`, `dg_auto.js`.

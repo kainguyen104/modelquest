@@ -39,7 +39,7 @@ function hexBadge(id,locked=false,sm=false){const b=BADGES[id];
   return `<div class="hex ${sm?"sm":""} ${locked?"locked":""}" title="${esc(b.name)}${locked?" — "+esc(b.how):""}">
   <svg class="shape" viewBox="0 0 87 95"><path d="M38.5 4.2a10 10 0 0 1 10 0l28.4 16.4a10 10 0 0 1 5 8.7v36.4a10 10 0 0 1-5 8.7L48.5 90.8a10 10 0 0 1-10 0L10.1 74.4a10 10 0 0 1-5-8.7V29.3a10 10 0 0 1 5-8.7z" fill="${b.c}" stroke="#1A1F3D" stroke-width="3.6"/></svg>
   <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#1A1F3D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${ICP[b.g]}</svg></div>`}
-function award(id){if(S.badges[id])return; S.badges[id]=Date.now(); save();
+function award(id){if(S.badges[id]||(typeof akQuiet==="function"&&akQuiet()))return; S.badges[id]=Date.now(); save();
   toast(`${hexBadge(id,false,true)}<div><div style="font:800 1.4rem/1 var(--font);letter-spacing:.16em;text-transform:uppercase;color:var(--text2)">Badge earned</div><div style="font:800 2.4rem/1.2 var(--font)">${esc(BADGES[id].name)}</div></div>`);
   setTimeout(()=>{const t=$("#toast .hex"); if(t) celebrate(t,18)},380)}
 
@@ -77,6 +77,7 @@ function route(){
   const top=MISSIONS[r]||r.startsWith("p-")?"challenges":r.startsWith("ws-")?"workspace":r;
   $$(".navlink").forEach(b=>b.setAttribute("aria-current",b.dataset.go===top?"page":"false"));
   const v=$("#view"); hideTip(); $("#modal").innerHTML=""; stopTimers(); closeFlyouts(); ACTIVE=null; TIPV=null;
+  akSync(null);
   const m=MISSIONS[r], hidden=m&&m.custom&&m.prob.status!=="published"&&!S.teacher;
   if(m&&!hidden) renderMission(r,v);
   else if(r.startsWith("p-")){renderPending(v,hidden); enhance(v)}
@@ -250,6 +251,7 @@ function renderMission(id,v){
   $$("#stepbody [data-step]",v).forEach(b=>b.onclick=()=>{st.step=+b.dataset.step; save(); renderMission(id,v)});
   $$("#probbtn,[data-prob]",v).forEach(b=>b.onclick=()=>{problemModal(m,st); if(!st.d.probSeen){st.d.probSeen=true; save()} $$("[data-prob].nudge",v).forEach(x=>x.classList.remove("nudge"))});
   hydrateIcons(v); $$("textarea.etext",v).forEach(growTA); enhance(v);
+  akSync(m,st);
 }
 function advance(id,v){const st=S.missions[id]; if(st.step<STEPS.length-1){st.step++; st.reached=Math.max(st.reached,st.step); st.at=Date.now(); save(); renderMission(id,v); window.scrollTo({top:0})}}
 function completeMission(id){

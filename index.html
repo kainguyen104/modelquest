@@ -1,6 +1,7 @@
 <title>ModelQuest</title>
 <link rel="stylesheet" href="node_modules/katex/dist/katex.min.css">
 <script src="node_modules/katex/dist/katex.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800&amp;family=STIX+Two+Text:ital,wght@0,500;1,500&amp;display=swap">
 <style>
@@ -931,7 +932,7 @@ select.field.sm{appearance:none; -webkit-appearance:none; padding-right:3.6rem; 
 .dgintro{font:500 2.05rem/1.5 var(--font); color:var(--text2); max-width:112rem}
 .dgtn{margin-top:1.6rem}
 .dgbench{margin-top:2.4rem; padding:2.2rem 2.4rem 2.6rem; border-radius:3rem}
-.dgtop{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:1.4rem 2.6rem; align-items:center; padding-bottom:2rem; border-bottom:.22rem dashed #E3DAD3}
+.dgtop{display:grid; grid-template-columns:auto minmax(0,1fr); gap:1.4rem 2.6rem; align-items:center; padding-bottom:2rem; border-bottom:.22rem dashed #E3DAD3}
 .dgph{display:flex; gap:.6rem; list-style:none; margin:0; padding:0; flex-wrap:wrap}
 .dgpp{display:inline-flex; align-items:center; gap:.7rem; padding:.55rem 1.2rem .55rem .55rem; border:.22rem solid var(--ink); border-radius:999px; background:var(--white); font:800 1.65rem/1 var(--font); color:var(--text2)}
 button.dgpp{cursor:pointer}
@@ -946,8 +947,6 @@ button.dgpp{cursor:pointer}
 .dgok{width:3.4rem; height:3.4rem; border-radius:50%; background:var(--mint-done); border:.22rem solid var(--ink); display:inline-grid; place-items:center}
 .dgok svg{width:2rem; height:2rem}
 .dgagain{display:flex; align-items:center; gap:.7rem} .dgagain svg{width:2.1rem; height:2.1rem; flex:none}
-.dgans svg{width:2.2rem; height:2.2rem}
-.dgans[aria-pressed="true"]{background:var(--yellow-soft)}
 .dgbody{display:grid; grid-template-columns:33rem minmax(0,1fr); grid-template-areas:"side stage" "more stage"; grid-template-rows:auto 1fr; gap:2rem 2.6rem; margin-top:2.2rem; align-items:start}
 .dgside{grid-area:side; min-width:0} .dgstage{grid-area:stage; min-width:0} .dgmore{grid-area:more}
 .dgsh{display:flex; align-items:center; gap:1rem; margin-bottom:1.2rem}
@@ -1100,7 +1099,7 @@ body.dgdragging,body.dgdragging *{cursor:grabbing!important; user-select:none; -
 .smodel .dgstatic{margin-top:0}
 .sderr{margin-top:1.2rem; padding:1.2rem 1.4rem; border-radius:1.2rem; background:#FFF2F4; font:600 1.6rem/1.4 var(--font)} .sderr b{display:block; margin-bottom:.4rem}
 @media (max-width:900px){
-  .dgtop{grid-template-columns:1fr} .dgans{justify-self:start}
+  .dgtop{grid-template-columns:1fr}
   .dgbody{grid-template-columns:minmax(0,1fr); grid-template-areas:"side" "stage" "more"}
   .dgbody:not(.ph-place){grid-template-areas:"stage" "side" "more"}
   .dgtray{grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))}
@@ -1268,6 +1267,66 @@ body.dgdragging,body.dgdragging *{cursor:grabbing!important; user-select:none; -
 @keyframes typed{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 .goal.ok i{animation:navPop .4s cubic-bezier(.2,1.6,.4,1)}
 
+/* ---------- answer key (teacher mode): a button on every step; each answer is filled in on the page, one task at a time ---------- */
+body.akon main{padding-bottom:17rem}
+#akroot{position:fixed; right:calc(max(16px,2.4rem) + env(safe-area-inset-right,0px)); bottom:calc(max(16px,2.4rem) + env(safe-area-inset-bottom,0px)); z-index:80; display:flex; flex-direction:column; align-items:flex-end; pointer-events:none}
+#akroot[hidden]{display:none}
+#akbody{display:flex; flex-direction:column; align-items:flex-end} #akbody>*{pointer-events:auto}
+.aklive{position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.akfab{display:inline-flex; align-items:center; gap:1rem; height:6.2rem; padding:0 2.4rem 0 1.9rem; border:var(--bw) solid var(--ink); border-radius:999px; background:var(--lav); box-shadow:var(--sh); font:800 2.1rem/1 var(--font); color:var(--text); cursor:pointer; transition:transform .12s, box-shadow .12s}
+.akfab:hover{transform:translate(-.1rem,-.1rem); box-shadow:.5rem .6rem 0 var(--ink)}
+.akfab:active{transform:translate(.3rem,.4rem); box-shadow:.1rem .1rem 0 var(--ink)}
+.akfab:focus-visible,.akto:focus-visible,.akib:focus-visible{outline:.35rem solid var(--s1); outline-offset:.3rem}
+.akfab svg{width:2.8rem; height:2.8rem}
+.akc{padding:.45rem .8rem; border:.2rem solid var(--ink); border-radius:999px; background:var(--white); font:800 1.5rem/1 var(--font); font-variant-numeric:tabular-nums}
+.akpanel{width:max(44rem,360px); max-width:calc(100vw - 32px); max-height:calc(100vh - 15rem); max-height:calc(100dvh - 15rem); display:flex; flex-direction:column; background:var(--white); border:var(--bw) solid var(--ink); border-radius:2.4rem; box-shadow:.6rem .7rem 0 var(--ink); overflow:hidden; animation:akin .22s ease both}
+@keyframes akin{from{opacity:0; transform:translateY(1.4rem)}}
+.akhd{display:flex; align-items:center; gap:1.2rem; padding:1.2rem 1.3rem 1.2rem 1.5rem; background:var(--lav); border-bottom:var(--bw) solid var(--ink); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none} .akhd.drag{cursor:grabbing}
+.akchip{width:4.6rem; height:4.6rem; flex:none; display:grid; place-items:center; border:.25rem solid var(--ink); border-radius:1.3rem; background:var(--yellow-btn)} .akchip svg{width:2.7rem; height:2.7rem}
+.akht{flex:1; min-width:0; display:grid; gap:.35rem} .akht b{font:800 2.2rem/1.1 var(--font)} .akht small{font:600 1.5rem/1.25 var(--font); color:#4B4560}
+.akib{width:4.4rem; height:4.4rem; flex:none; display:grid; place-items:center; padding:0; border:.25rem solid var(--ink); border-radius:1.2rem; background:var(--white); box-shadow:.2rem .3rem 0 var(--ink); color:var(--text); cursor:pointer}
+.akib svg{width:2.2rem; height:2.2rem} .akib:hover{background:var(--yellow-soft)}
+.akprog{display:flex; align-items:center; gap:1.2rem; padding:1.1rem 1.6rem; border-bottom:.2rem solid #EEE6E1; font:700 1.6rem/1 var(--font); color:var(--text2); font-variant-numeric:tabular-nums}
+.akbar{flex:1; height:1.2rem; border:.2rem solid var(--ink); border-radius:999px; background:var(--track); overflow:hidden} .akbar i{display:block; height:100%; background:var(--mint); transition:width .25s}
+.aktasks{flex:1 1 auto; min-height:0; max-height:27vh; overflow:auto; overscroll-behavior:contain; list-style:none; margin:0; padding:.8rem .9rem; background:var(--card)}
+.akrow+.akrow{margin-top:.3rem}
+.akto{width:100%; display:flex; align-items:flex-start; gap:1rem; padding:.75rem .8rem; border:.2rem solid transparent; border-radius:1.2rem; background:none; text-align:left; cursor:pointer; font:600 1.7rem/1.3 var(--font); color:var(--text2)}
+.akto:hover:not([disabled]){background:#F6EFEA}
+.akto[disabled]{cursor:default}
+.akrow.done .akto{color:var(--text)}
+.akrow.next .akto{border-color:var(--ink); background:var(--yellow-soft); color:var(--text); font-weight:700}
+.akn{flex:none; width:3rem; height:3rem; display:grid; place-items:center; border:.22rem solid var(--ink); border-radius:50%; background:var(--white); font:800 1.45rem/1 var(--font); font-variant-numeric:tabular-nums}
+.akn svg{width:1.7rem; height:1.7rem} .akrow.done .akn{background:var(--mint-done)}
+.akt{flex:1; min-width:0; padding-top:.2rem; overflow-wrap:anywhere}
+.akt .mline{font-size:1.05em} .akt b{font-weight:800}
+.aktag{display:inline-block; vertical-align:.15em; margin-left:.3rem; padding:.3rem .7rem; border-radius:999px; background:var(--pink-soft); font:800 1.15rem/1 var(--font); font-style:normal; letter-spacing:.04em; text-transform:uppercase; color:#8A2E44}
+.aklast{display:flex; align-items:flex-start; gap:.9rem; margin:0; padding:1.1rem 1.5rem; border-top:.2rem solid #EEE6E1; background:var(--mint-result); font:600 1.6rem/1.4 var(--font); color:var(--text)}
+.aklast>svg{width:2.1rem; height:2.1rem; flex:none; margin-top:.1rem; color:#0E8C6E}
+.aklast b{font-weight:800}
+.aklnote{display:block; margin-top:.3rem; font-weight:500; color:var(--text2)}
+.aklast.busy{background:var(--yellow-soft); align-items:center}
+.akspin{width:2rem; height:2rem; flex:none; border:.3rem solid var(--ink); border-right-color:transparent; border-radius:50%; animation:akspin .8s linear infinite}
+@keyframes akspin{to{transform:rotate(360deg)}}
+.akempty{margin:1.6rem 1.8rem 2rem; font:600 1.8rem/1.4 var(--font); color:var(--text2)}
+.akft{display:flex; flex-wrap:wrap; gap:1rem; padding:1.2rem 1.3rem 1.3rem; border-top:.2rem solid #EEE6E1; background:var(--white)}
+.akft .btn.sm{font-size:1.75rem}
+.akft [data-aknext]{flex:1 1 auto}
+.akpanel.busy .akft .btn{opacity:.55}
+/* where an answer just went in */
+.akflash{animation:akflash 2s ease both; border-radius:1.6rem}
+@keyframes akflash{0%,55%{outline:.45rem solid #7C5CFF; outline-offset:.5rem; box-shadow:0 0 0 1.4rem rgba(124,92,255,.18)}100%{outline:.45rem solid rgba(124,92,255,0); outline-offset:.5rem; box-shadow:0 0 0 1.4rem rgba(124,92,255,0)}}
+@media (prefers-reduced-motion:reduce){.akflash{outline:.45rem solid #7C5CFF; outline-offset:.5rem}}
+/* Understand has nothing to fill in: its answers appear as a card under the brief */
+.aknotes{position:relative; z-index:3; margin:3rem 4.5rem 0 4.4rem; padding:2.6rem 3.2rem 3rem; border-radius:3rem; box-shadow:.4rem .6rem 0 var(--ink); background:var(--white)}
+.aknh{display:flex; align-items:center; gap:1.2rem; margin-bottom:1.4rem} .aknh b{font:800 2.6rem/1.1 var(--font)} .aknh small{font:600 1.7rem/1 var(--font); color:var(--text3)}
+.aknl{margin:0; padding-left:2.6rem; display:grid; gap:1.6rem} .aknl li{font:500 2.1rem/1.45 var(--font)} .aknl li::marker{font-weight:800}
+.aknl li>b{font-weight:800}
+.aknb{margin-top:.5rem} .aknb>*+*{margin-top:.8rem}
+.akul{margin:0; padding-left:2.4rem} .akul li+li{margin-top:.5rem}
+.akkv{display:grid; grid-template-columns:minmax(0,auto) minmax(0,1fr); gap:.6rem 1.8rem; margin:0; align-items:baseline}
+.akkv dt{font-weight:700; color:var(--text2)} .akkv dd{margin:0}
+.akmeta{font-weight:600; font-size:.88em; color:var(--text3)}
+.aklab{font:800 1.4rem/1.2 var(--font); letter-spacing:.06em; text-transform:uppercase; color:var(--text3)}
 /* ---------- responsive ---------- */
 @media (max-width:900px){
   html{font-size:7.6px}
@@ -1356,6 +1415,14 @@ body.dgdragging,body.dgdragging *{cursor:grabbing!important; user-select:none; -
 @media (max-width:340px){.brand{font-size:0; gap:0} .steps-c .lab,.steps-c.lg .lab{font-size:1.12rem; padding:.3rem .25rem; letter-spacing:-.01em} .steps-c .on .lab,.steps-c.lg .on .lab{padding:.3rem .4rem}}
 @media (max-width:400px){body.teacher .brand{font-size:2rem} body.teacher .navlink svg{width:3.2rem; height:3.2rem}}
 @media (max-width:372px){body.teacher .brand{font-size:0; gap:0}}
+@media (max-width:560px){
+  #akroot{left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); bottom:calc(8px + env(safe-area-inset-bottom,0px)); align-items:stretch}
+  .akfab{height:5.8rem; font-size:2rem}
+  .akpanel{align-self:stretch; width:auto; max-width:none; max-height:56vh; max-height:56dvh}
+  .aktasks{max-height:22vh}
+  .akhd{cursor:default}
+}
+@media (max-width:900px){.aknotes{margin:3rem 0 0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
 </style>
 
@@ -1534,7 +1601,7 @@ function hexBadge(id,locked=false,sm=false){const b=BADGES[id];
   return `<div class="hex ${sm?"sm":""} ${locked?"locked":""}" title="${esc(b.name)}${locked?" — "+esc(b.how):""}">
   <svg class="shape" viewBox="0 0 87 95"><path d="M38.5 4.2a10 10 0 0 1 10 0l28.4 16.4a10 10 0 0 1 5 8.7v36.4a10 10 0 0 1-5 8.7L48.5 90.8a10 10 0 0 1-10 0L10.1 74.4a10 10 0 0 1-5-8.7V29.3a10 10 0 0 1 5-8.7z" fill="${b.c}" stroke="#1A1F3D" stroke-width="3.6"/></svg>
   <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="#1A1F3D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${ICP[b.g]}</svg></div>`}
-function award(id){if(S.badges[id])return; S.badges[id]=Date.now(); save();
+function award(id){if(S.badges[id]||(typeof akQuiet==="function"&&akQuiet()))return; S.badges[id]=Date.now(); save();
   toast(`${hexBadge(id,false,true)}<div><div style="font:800 1.4rem/1 var(--font);letter-spacing:.16em;text-transform:uppercase;color:var(--text2)">Badge earned</div><div style="font:800 2.4rem/1.2 var(--font)">${esc(BADGES[id].name)}</div></div>`);
   setTimeout(()=>{const t=$("#toast .hex"); if(t) celebrate(t,18)},380)}
 
@@ -1572,6 +1639,7 @@ function route(){
   const top=MISSIONS[r]||r.startsWith("p-")?"challenges":r.startsWith("ws-")?"workspace":r;
   $$(".navlink").forEach(b=>b.setAttribute("aria-current",b.dataset.go===top?"page":"false"));
   const v=$("#view"); hideTip(); $("#modal").innerHTML=""; stopTimers(); closeFlyouts(); ACTIVE=null; TIPV=null;
+  akSync(null);
   const m=MISSIONS[r], hidden=m&&m.custom&&m.prob.status!=="published"&&!S.teacher;
   if(m&&!hidden) renderMission(r,v);
   else if(r.startsWith("p-")){renderPending(v,hidden); enhance(v)}
@@ -1745,6 +1813,7 @@ function renderMission(id,v){
   $$("#stepbody [data-step]",v).forEach(b=>b.onclick=()=>{st.step=+b.dataset.step; save(); renderMission(id,v)});
   $$("#probbtn,[data-prob]",v).forEach(b=>b.onclick=()=>{problemModal(m,st); if(!st.d.probSeen){st.d.probSeen=true; save()} $$("[data-prob].nudge",v).forEach(x=>x.classList.remove("nudge"))});
   hydrateIcons(v); $$("textarea.etext",v).forEach(growTA); enhance(v);
+  akSync(m,st);
 }
 function advance(id,v){const st=S.missions[id]; if(st.step<STEPS.length-1){st.step++; st.reached=Math.max(st.reached,st.step); st.at=Date.now(); save(); renderMission(id,v); window.scrollTo({top:0})}}
 function completeMission(id){
@@ -2577,7 +2646,7 @@ MISSIONS.plans={
   },
   (el,st,ctx)=>{
     const V=VARS(st), R=modelRunner(V,st.d.prog||{body:[]}), v=(k,g,n=1)=>R.at({g,n}).v[k];
-    let cross=null; for(let g=0;g<=30.0001;g+=0.01){const a=v("cost_A",g),b=v("cost_B",g); if(!Number.isFinite(a)||!Number.isFinite(b)) break; if(a>=b){cross=[Math.round(g*100)/100,a]; break}}
+    let cross=null; for(let i=0;i<=3000;i++){const g=i/100, a=v("cost_A",g),b=v("cost_B",g); if(!Number.isFinite(a)||!Number.isFinite(b)) break; if(a>=b-1e-9){cross=[g,a]; break}}
     const asl={tax:"Taxes and fees",cap:"Same data every month",dev:"Phone payments"};
     const PL=[["","— choose a plan —"],["A","Plan A"],["B","Plan B"],["F","Family plan"]];
     explainShell(el,MISSIONS.plans,`
@@ -2604,6 +2673,45 @@ const ASM=[{k:"fee",t:"Each plan charges a monthly fee plus a price for each GB"
   {k:"use",t:"How much data she uses doesn't matter",ok:false,why:"Data use is the input g. The whole model is about how the cost changes with it."},
   {k:"rise",t:"Prices will go up next year",ok:false,why:"Nothing in the brief says prices change. Leave that out of this model."}];
 MISSIONS.plans.eq=EQ; MISSIONS.plans.dg=DG;
+/* ---- answer key (teacher mode): each task fills its answer into the step. Diagram and Equation answers come from DG and EQ. ---- */
+akLazy(MISSIONS.plans,()=>{const v=BK.v, op=BK.op;
+  // the Build answers, one task each, in program order
+  const REF=[()=>[BK.set("cost_A",op("add",v("fixed_A"),op("mul",v("rate_A"),v("g"))))],
+    ()=>[BK.set("cost_B",op("add",v("fixed_B"),op("mul",v("rate_B"),v("g"))))],
+    ()=>[BK.plot("cost_A","g"),BK.plot("cost_B","g")],
+    ()=>[BK.ifelse(op("lt",v("cost_A"),v("cost_B")),[BK.say("Plan A")],[BK.say("Plan B")])],
+    ()=>[BK.set("total",op("add",op("add",v("base_F"),op("mul",v("line_F"),v("n"))),op("mul",v("gb_F"),op("mul",v("n"),v("g"))))),BK.set("family_each",op("div",v("total"),v("n")))],
+    ()=>[BK.plot("family_each","g")]];
+  const MODEL=["prog","tasks","mine","view"];
+  const build=(st,upto)=>{const d=st.d; d.prog={body:[].concat(...REF.slice(0,upto+1).map(f=>f()))}; d.tasks=d.tasks||{};
+    if(upto>=3) d.tasks.cheaper=true; if(upto>=4){d.tasks.family=true; d.mine=d.mine||[]; if(!d.mine.includes("total")) d.mine.push("total")} d.view=d.view||{g:8,n:4}};
+  // later steps run the model, so they put the full answer in first if the one on the page doesn't work
+  const works=st=>{const d=st.d; if(!d.prog||!d.tasks||!d.tasks.family) return false; try{return checks(st,modelRunner(VARS(st),d.prog)).every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)) build(st,REF.length-1)}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  const def=st=>st.d.def||(st.d.def={});
+  return {
+  0:()=>[
+    {t:"What's the question?",html:akP("Is the cousin right that Plan B is cheaper? Which plan costs less, and does the answer change with how much data she uses? In Build, her mom adds a second question: should the family of four share a family plan?")},
+    {t:"What do we know?",html:akKV([["Plan A","$20 a month + $8 per GB"],["Plan B","$45 a month + $3 per GB"],["Her data","about 8 GB a month"],["Family plan <span class='akmeta'>arrives in Build</span>","$40 a month + $10 per line + $4 per GB anyone uses"]])},
+    {t:"What will the model work out?",html:akP("Each plan's bill for the month, in $, for any amount of data <b>g</b>, in GB: <b>cost_A</b> and <b>cost_B</b>. Later, <b>family_each</b>: what each person pays when <b>n</b> people share the family plan.")},
+    {t:"Where the class should end up",html:akP("The two bills are equal at <b>5 GB</b>, where both are <b>$60</b>. Below 5 GB Plan A is cheaper, and above it Plan B is. At 8 GB Plan A is $84 and Plan B is $69, so the cousin is right for her. A family of four using 8 GB each pays <b>$52 each</b> on the family plan, less than either plan on its own.")}],
+  1:()=>[
+    {t:"Units for g and C",keys:["def"],target:"#d-ug",apply:st=>{const d=def(st); d.ug="GB per month"; d.uc="$ per month"}},
+    {t:"Plan A's numbers",keys:["def"],target:"#w-fA",apply:st=>{const d=def(st); d.fA="20"; d.rA="8"}},
+    {t:"Plan B's numbers",keys:["def"],target:"#w-fB",apply:st=>{const d=def(st); d.fB="45"; d.rB="3"}},
+    {t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the two it doesn't."}],
+  3:()=>["Build <b>cost_A</b>: Plan A's bill when someone uses g GB","Build <b>cost_B</b> the same way for Plan B","Plot <b>cost_A</b> and <b>cost_B</b> against <b>g</b>",
+      "Say <b>Plan A</b> or <b>Plan B</b>, whichever is cheaper at any g","Build <b>family_each</b>: what each person pays on the family plan","Plot <b>family_each</b> against <b>g</b>"].map((t,i)=>({t,tag:i>=3?"new task":"",keys:MODEL,target:i===2||i===5?".studio .gpanel":"#cv",
+      apply:st=>build(st,i),note:["Check: slide g to 0 and the console says cost_A = $20.","Check: at g = 5 the console says cost_B = $60.","The lines cross at g = 5 GB, where both bills are $60. Close the pop-up to see the next task.",
+        "Slide g to 2, then to 9: it says “Plan A”, then “Plan B”. Close the pop-up to see the family task.","The new variable <b>total</b> is made in Variables first. Check: at n = 4 and g = 5, family_each = $40.","At n = 4 and g = 8 the family line, $52, is the lowest."][i]})),
+  5:()=>[
+    {t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"All four pass: $20 at 0 GB, $60 for Plan B at 5 GB, both plans $60 at 5 GB, and the family price drops from $70 to $40."},
+    {t:"Bug hunt: the flat-fee fumble",keys:["b1","b2","bugOK"],target:"#bw1",apply:st=>{st.d.b1="8"; st.d.b2="20"},note:"At 0 GB the classmate's model says $8, but the bill is $20: the 20 and the 8 swapped roles."}],
+  6:()=>[
+    {t:"Advice for your cousin, 8 GB a month",keys:withModel(["a1"]),target:"#a1",apply:st=>{ensure(st); st.d.a1="B"},note:"Plan B: $69 a month, against $84 for Plan A."},
+    {t:"Advice for the family of four, 8 GB each",keys:["a2"],target:"#a2",apply:st=>{st.d.a2="F"},note:"The family plan: $52 each."},
+    {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why="Plan B costs $25 more to start, but each GB is $5 cheaper, so the bills meet at 25 ÷ 5 = 5 GB, where both are $60. Above 5 GB Plan B is cheaper: at 8 GB it's $69 against $84. On the family plan the four of them share the account fee, so at 8 GB each it's $52 per person."},note:"A sample answer. Look for the break-even point and the two bills at 8 GB."},
+    {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim="Taxes and fees are left out. Her data use changes from month to month: in a month under 5 GB, Plan A would be cheaper. Paying off the phone is left out, and the family plan assumes everyone uses the same amount of data."},note:"A sample answer."}]}});
 })();
 
 /* ================= Mission 2 · The Decay Mystery ================= */
@@ -2977,6 +3085,42 @@ MISSIONS.decay={
   }]
 };
 MISSIONS.decay.eq=EQ; MISSIONS.decay.dg=DG;
+/* ---- answer key (teacher mode): each task fills its answer into the step. Diagram and Equation answers come from DG and EQ. ---- */
+akLazy(MISSIONS.decay,()=>{const v=BK.v, op=BK.op;
+  const REF=[()=>[BK.set("N",op("mul",v("N0"),op("pow","0.5",op("div",v("t"),v("H")))))],
+    ()=>[BK.plot("N","t")],
+    ()=>[BK.set("age",op("mul",v("H"),op("div",BK.fn("ln",op("div",v("f"),v("N0"))),BK.fn("ln","0.5"))))],
+    ()=>[BK.set("left",v("N0")),BK.set("k","0"),BK.until(op("lt",v("left"),"1"),[BK.set("left",op("mul",v("left"),"0.5")),BK.change("k",1)]),BK.say(v("k"))]];
+  const MODEL=["prog","tasks","mine","view"];
+  const build=(st,upto)=>{const d=st.d; d.prog={body:[].concat(...REF.slice(0,upto+1).map(f=>f()))}; d.tasks=d.tasks||{};
+    if(upto>=2) d.tasks.lab=true; if(upto>=3){d.tasks.museum=true; d.mine=d.mine||[]; ["left","k"].forEach(k=>{if(!d.mine.includes(k)) d.mine.push(k)})} d.view=d.view||{t:11460,f:41}};
+  const works=st=>{const d=st.d; if(!d.prog||!d.tasks||!d.tasks.museum) return false; try{return checks(st,modelRunner(VARS(st),d.prog),d.prog).every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)) build(st,REF.length-1)}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  const def=st=>st.d.def||(st.d.def={});
+  return {
+  0:()=>[
+    {t:"What's the question?",html:akP("How many years ago did the tree die? The artifact's wood still has <b>25%</b> of the carbon-14 it had when the tree died.")},
+    {t:"What do we know?",html:akKV([["When the tree died","100% of its carbon-14"],["Half-life","5,730 years: half of what's left decays every 5,730 years"],["The artifact today","25% left"],["Second sample <span class='akmeta'>arrives in Build</span>","41% left"]])},
+    {t:"What will the model work out?",html:akP("<b>N</b>, the percent of carbon-14 left after <b>t</b> years. Then the model runs backwards: <b>age</b>, the years since the tree died, from <b>f</b>, the percent that's left.")},
+    {t:"Where the class should end up",html:akP("25% left is two half-lives, so the tree died about <b>11,460 years</b> ago. The second sample, with 41% left, is about <b>7,370 years</b> old. Carbon-14 dates when the tree died, not when someone carved the wood.")}],
+  1:()=>[
+    {t:"Initial amount N₀",keys:["def"],target:"#w-n0",apply:st=>{def(st).n0="100"},note:"Every amount is a percent of what the living tree had."},
+    {t:"Half-life H",keys:["def"],target:"#w-h",apply:st=>{def(st).h="5730"},note:"Elapsed time t has nothing to type: it's what the model finds."},
+    {t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the two it doesn't."}],
+  3:()=>["Build <b>N</b>: the percent of carbon-14 left after <b>t</b> years","Plot <b>N</b> against <b>t</b>","Build <b>age</b>: how many years ago the tree died, when <b>f</b>% is left",
+      "Use a <b>loop</b> to find how many half-lives until less than 1% is left, and <b>say</b> it"].map((t,i)=>({t,tag:i>=2?"new task":"",keys:MODEL,target:i===1?".studio .gpanel":"#cv",
+      apply:st=>build(st,i),note:["Check: slide t to 5,730 and the console says N = 50%.","The curve halves every 5,730 years and never reaches 0. Close the pop-up to see the next task.",
+        "Check: slide f to 25% and the console says age = 11,460 years; at 41% it's about 7,370.","It says 7: after 6 half-lives 1.56% is left, and after 7 only 0.78%. The variables left and k are made in Variables first."][i]})),
+  5:()=>[
+    {t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"All five pass: 100%, 50% and 25% at 0, 1 and 2 half-lives, then the age block dates 41% and 25%."},
+    {t:"Bug hunt: the disappearing carbon",keys:["b1","b2","bugOK"],target:"#bw1",apply:st=>{st.d.b1="0"; st.d.b2="-50"},note:"0% at 11,460 years and −50% at 17,190: the model loses the same amount every half-life."},
+    {t:"Does the log base matter?",keys:["bases"],target:"#bout",apply:st=>{st.d.bases=["e","10","2"]},note:"No: the ratio is 1.2863 half-lives in every base."}],
+  6:()=>[
+    {t:"Estimated age",keys:withModel([]),target:".ex .result",apply:ensure,note:"≈ 11,460 years: 25% left is two half-lives, 2 × 5,730."},
+    {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why="25% left means two half-lives have passed: 100% → 50% → 25%. So t = 2 × 5,730 = 11,460 years. My age block gives the same: 5,730 × ln(0.25) ÷ ln(0.5) = 11,460."},note:"A sample answer. Look for the number of half-lives and a number from the model."},
+    {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim="The model assumes the living tree had the same share of carbon-14 as living things today, and that nothing added or removed carbon after the tree died. The half-life is a measurement, so the age is an estimate, not an exact year."},note:"A sample answer."},
+    {t:"One last check: does the answer prove someone carved the bowl that long ago?",keys:withModel(["tw","why"]),target:".modal .box",
+      apply:st=>{ensure(st); if(String(st.d.why||"").trim().length<15) st.d.why="25% left means two half-lives have passed, so about 2 × 5,730 = 11,460 years."; st.d.tw="no"},after:akClick(".ex #sub"),note:"No: it dates when the wood stopped taking in carbon. A tree can be cut long before it's carved."}]}});
 })();
 
 /* ================= Mission 3 · Wildfire Watch (Build step uses the Simulation Lab reference) ================= */
@@ -3494,6 +3638,58 @@ MISSIONS.fire={
   }]
 };
 MISSIONS.fire.eq=EQ; MISSIONS.fire.dg=DG;
+/* ---- answer key (teacher mode): each task fills its answer into the step, and the run tasks run the lab and the trials.
+   The trial and sweep numbers are what any working rule gives: with p_immune = 0 and no lightning the spread doesn't depend
+   on chance, and the forests come from fixed seeds. ---- */
+akLazy(MISSIONS.fire,()=>{const v=BK.v, op=BK.op, N=BK.n;
+  const is=k=>op("eq",N("fstate"),N("fkind",{k})), become=k=>N("fbecome",{k}), count=c=>c?[BK.change("caught",1)]:[];
+  const burn=()=>BK.iff(is("2"),[become("0")]);
+  const spread=c=>BK.iff(op("lt",N("frand"),op("sub","1",v("p_immune"))),[become("2")].concat(count(c)));
+  const light=c=>BK.iff(op("lt",N("frand"),op("mul",v("p_lightning"),op("sub","1",v("p_immune")))),[become("2")].concat(count(c)));
+  const tree=(c,lit)=>BK.iff(is("1"),[BK.ifelse(op("gt",N("fnb"),"0"),[spread(c)],lit?[light(c)]:[])]);
+  const MODEL=["prog","tasks","mine","mode","P","ranOut"];
+  const build=(st,upto)=>{const d=st.d; d.prog={body:upto===0?[burn()]:[burn(),tree(upto>=3,upto>=2)]}; d.tasks=d.tasks||{};
+    if(upto>=3){d.tasks.count=true; d.mine=d.mine||[]; if(!d.mine.includes("caught")) d.mine.push("caught")}
+    if(upto>=4){d.mode="next"; d.P=Object.assign({pTree:0.85,pI:0.3,pL:0},d.P||{},{pL:0})}};
+  const works=st=>{const d=st.d; if(!d.prog||!d.tasks||!d.tasks.count||d.mode!=="next") return false; try{const C=checks(st,ruleEngine(VARS(st),d.prog)); return C.ruleOK&&C.G.filter(g=>g.k!=="run").every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)){build(st,4); st.d.ranOut=true}}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  // the Explain step needs the trials and the sweep: run them the way the Test step does, with the same seeds
+  const runs=st=>new Promise(res=>{const d=st.d, R=ruleEngine(VARS(st),d.prog||{body:[]}), mode=d.mode||"next";
+    const sweep=()=>{if(d.sweep) return res(true); const D=[]; for(let i=0;i<=12;i++) D.push(Math.round((0.3+i*0.05)*100)/100); const r=D.map(()=>[]);
+      runBatch(D.length*30,k=>trial(R,mode,{pTree:D[k%D.length],pI:0,pL:0},30,7919+k),(k,x)=>r[k%D.length].push(x),()=>{d.sweep=D.map((x,i)=>[x,r[i].reduce((a,b)=>a+b,0)/r[i].length]); save(); res(true)})};
+    if(d.trial&&d.trial.n>=200) return sweep();
+    const vals=[], p=(d.trialCfg&&d.trialCfg.p)||0.6;
+    runBatch(200,k=>trial(R,mode,{pTree:p,pI:0,pL:0},30,7000+k),(k,x)=>vals.push(x),()=>{d.trial={p,n:200,mean:vals.reduce((a,b)=>a+b,0)/200,median:median(vals),vals:vals.map(x=>Math.round(x*10)/10)}; save(); sweep()})});
+  const def=st=>st.d.def||(st.d.def={});
+  return {
+  0:()=>[
+    {t:"What's the question?",html:akP("How much should the fire district thin the forest so that a fire usually stays small?")},
+    {t:"What do we know?",html:akKV([["Each square","empty, a tree, or burning"],["A burning square","burns out after one step"],["A tree next to a fire","resists catching with chance p_immune = 0.3"],["A tree with no fire nearby","lightning hits it with chance p_lightning = 0.001 each step, and it can still resist"]])},
+    {t:"What will the model work out?",html:akP("The chance that each kind of tree catches, then a rule that every square follows each step. Running hundreds of fires at different tree densities shows how much of the forest usually burns.")},
+    {t:"Where the class should end up",html:akP("There's a tipping point near a density of <b>0.56</b>: below it most fires die out early, and above it most burn nearly everything. Thinning from <b>0.7 to 0.55</b> buys the most protection.")}],
+  1:()=>[
+    {t:"A tree next to a fire catches with probability…",keys:["def"],target:"#w-q1",apply:st=>{def(st).q1="0.7"},note:"Complement rule: it either catches or resists, so 1 − 0.3 = 0.7."},
+    {t:"A tree with no fire nearby catches with probability…",keys:["def"],target:"#w-q2",apply:st=>{def(st).q2="0.0007"},note:"Multiplication rule: lightning hits and the tree fails to resist, so 0.001 × 0.7 = 0.0007."},
+    {t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the one it doesn't."}],
+  3:()=>["A burning square <b>burns out</b>: next step it's empty","A tree <b>next to a fire</b> catches with chance <b>1 − p_immune</b>","A tree with <b>no fire nearby</b> catches only if lightning hits <b>and</b> it doesn't resist",
+      "Count how many trees <b>catch fire</b> in each step","Write each step to <b>a fresh copy</b>, then <b>Run</b> a fire until it burns out"].map((t,i)=>({t,tag:i===3?"new task":"",keys:MODEL,target:i===4?"#cv3":"#cv",
+      apply:st=>build(st,i),after:i===4?akClick("#frun",()=>/Run/.test(($("#frun")||{}).textContent||""),40000):null,
+      note:["The rule runs once for every square, every step.","Check: the P(spread) badge reads about 0.70 at p_immune = 0.3. Press Step to watch it spread.","The lightning test goes in the else part. With the rule complete, the counting task pops up: close it to go on.",
+        "The variable caught is made in Variables first. It starts at 0 every step, so it needs no set block.","Each square reads the same snapshot of the forest, so the fire moves one square per step. The bear says “Burned out!” at the end."][i]})),
+  5:()=>[
+    {t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"All five pass: fires burn out, immune trees stop the fire and resist lightning, a full forest burns, and fire moves one square per step."},
+    {t:"Run 200 fires at density 0.6",keys:["trial","trialCfg"],target:"#inv",apply:st=>{st.d.trialCfg=Object.assign(st.d.trialCfg||{},{p:0.6,n:200})},after:akClick("#trun",()=>{const t=S.missions.fire.d.trial; return !!t&&t.n>=200&&!!document.querySelector("#tres .mstat")}),
+      note:"Mean about 68%, median about 84%: most fires either die early or burn most of the forest, so the mean describes almost none of them."},
+    {t:"Where is the tipping point?",keys:["sweep"],target:"#sres",apply:()=>{},after:akClick("#srun",()=>!!S.missions.fire.d.sweep&&!!document.querySelector("#sres svg")),
+      note:"The average burn shoots up between 0.55 and 0.6: the tipping point is about 0.56."},
+    {t:"Challenge the rule (optional)",keys:["challenged"],target:"#cres",apply:()=>{},after:akClick("#crun",()=>!!document.querySelector("#cres table")),
+      note:"The each-neighbour rule burns more: about 74% against about 63%."}],
+  6:()=>[
+    {t:"Tipping point",keys:withModel(["trial","sweep"]),target:".ex .result",apply:ensure,after:st=>st.d.sweep&&st.d.trial?false:runs(st),note:"≈ 0.56 density, from the sweep."},
+    {t:"Advice: which thinning plan buys the most protection?",keys:["ad"],target:"[data-ad]",apply:st=>{st.d.ad="0.7-0.55"},note:"Thin from 0.7 to 0.55: the average burn drops from about 98% to about 38%, by far the biggest saving."},
+    {t:"Spread: what usually happens?",keys:["sp"],target:"[data-sp]",apply:st=>{st.d.sp="two"},note:"Most fires either die early or burn most of the forest."},
+    {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why="Above a density of about 0.56, trees are close enough that a fire almost always finds a path across the forest, so most fires burn nearly everything. Thinning from 0.7 to 0.55 takes the forest below the tipping point: the average burn drops from about 98% to about 38%."},note:"A sample answer. Look for a number from the sweep or the trials."},
+    {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim="Real fires have wind and slopes, and a real forest has edges instead of wrapping around. Every square changes at the same moment. My rule gives a tree the same chance whether one neighbour burns or four, and the each-neighbour rule burns more. Lightning was off in the trials."},note:"A sample answer."}]}});
 })();
 
 /* ================= classroom layer: shared progress, class problems, AI, file import =================
@@ -4196,6 +4392,51 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
       if($("#ans",el).value.trim().length<8){fb.textContent="Write your answer to the question, using a number from your model."; $("#ans",el).focus(); return}
       if($("#why",el).value.trim().length<15){fb.textContent="Add a sentence to Why? that says how your model supports your answer."; $("#why",el).focus(); return}
       fb.textContent=""; completeMission(m.id)}}];
+  /* answer key (teacher mode): each task fills its answer into the step, worked out from the teacher's formulas,
+     plus the teacher's own answer key when there is one */
+  const base={}; p.vars.filter(v=>v.kind==="in").forEach(v=>base[v.key]=v.start);
+  const KV=v=>`<b>${esc(v.key)}</b>${v.name?` <span class="akmeta">${esc(v.name)}</span>`:""}`, story=()=>ptText(p,base);
+  const key=()=>(typeof Cloud!=="undefined"&&Cloud.keys&&Cloud.keys[p.id])||null;
+  const outsOK=()=>{const model=probModel(p); return p.vars.filter(v=>v.kind==="out"&&!model.errs[v.key])};
+  // the Build answers: a set block for each output (when its formula can be made of blocks), then the plot
+  const REF=()=>{const outs=outsOK(), ins=p.vars.filter(v=>v.kind==="in"), T=outs.map(v=>{let ast=null; try{ast=parseFormula(v.formula)}catch(e){} const b=ast&&akAstBlock(ast); return {v,f:()=>b!=null?[BK.set(v.key,akAstBlock(ast))]:[],ok:b!=null}});
+    if(ins.length&&outs.length) T.push({plot:true,f:()=>outs.map(o=>BK.plot(o.key,ins[0].key)),ok:true}); return T};
+  const MODEL=["prog","mine","view"];
+  const build=(st,upto)=>{const R=REF(); st.d.prog={body:[].concat(...R.slice(0,upto+1).map(x=>x.f()))}};
+  const works=st=>{const d=st.d; if(!d.prog) return false; try{return customChecks(p,modelRunner(customVars(p,st),d.prog),probModel(p),samplePoints(p)).every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)) build(st,REF().length-1)}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  const def=st=>st.d.def||(st.d.def={});
+  // written answers in plain words, from the formulas and the story's numbers
+  const sig=x=>+(+x).toPrecision(6);
+  const numbers=()=>{const at=probModel(p).at(base); return outsOK().filter(v=>Number.isFinite(at[v.key])).map(v=>`${v.key} = ${showV(v,at[v.key])}`)};
+  const worked=()=>{const model=probModel(p), at=model.at(base), env={}; p.vars.forEach(v=>{if(Number.isFinite(at[v.key])) env[v.key]=sig(at[v.key])});
+    return outsOK().filter(v=>Number.isFinite(at[v.key])).map(v=>{try{const ast=parseFormula(v.formula), sub=astSub(ast,Object.fromEntries(Object.entries(env).filter(([k])=>k!==v.key)));
+      const shown=showV(v,at[v.key]), exact=Math.abs(parseFloat(shown.replace(/[^\d.\-]/g,""))-at[v.key])<1e-9;
+      return `${v.key} = ${astText(ast,true)} = ${astText(sub,true)} ${exact?"=":"≈"} ${shown}`}catch(e){return ""}}).filter(Boolean)};
+  const listAnd=a=>a.length<2?a.join(""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];
+  m.answers={
+    0:()=>{const model=probModel(p), at=model.at(base), pars=p.vars.filter(v=>v.kind==="par"), ins=p.vars.filter(v=>v.kind==="in"), outs=p.vars.filter(v=>v.kind==="out"), k=key();
+      const res=outs.filter(v=>Number.isFinite(at[v.key])).map(v=>`<b>${esc(v.key)} = ${esc(showV(v,at[v.key]))}</b>`);
+      return [
+        {t:"What's the question?",html:akP(esc(p.question||p.explain.prompt||"No question written yet: add one in the Workspace."))},
+        {t:"What do we know?",html:akKV(pars.map(v=>[KV(v),esc(showV(v,v.val))]).concat(ins.map(v=>[KV(v),`${esc(showV(v,v.start))} in the story <span class="akmeta">slides from ${esc(showV(v,v.min))} to ${esc(showV(v,v.max))}</span>`])))},
+        {t:"What will the model work out?",html:akUL(outs.map(v=>`<b>${esc(v.key)}</b>${v.name?`: ${esc(v.name)}`:""}`))},
+        {t:"Where the class should end up",html:((res.length?akP(res.join(" · ")+(ins.length?` when ${esc(story())}`:"")):"")+(k&&k.solution&&k.solution.answer?akLab("From your answer key")+akP(esc(k.solution.answer)):""))||akP("Finish the formulas in the Workspace to see the model's answer here.")}]},
+    1:()=>{const pars=p.vars.filter(v=>v.kind==="par"), T=[];
+      if(pars.length) T.push({t:"The given numbers",keys:["def"],target:"#w-0",apply:st=>{const d=def(st); pars.forEach(v=>d["v_"+v.key]=String(v.val))},note:"Inputs and outputs have nothing to type: students slide the inputs, and the model works out the outputs."});
+      if(ASM.length) T.push({t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the ones it doesn't."});
+      return T},
+    3:()=>{const model=probModel(p), at=model.at(base), ins=p.vars.filter(v=>v.kind==="in");
+      return REF().map((x,i)=>x.plot?{t:`Plot ${x.f().length>1?"your outputs":`<b>${esc(x.f()[0].f.y)}</b>`} against <b>${esc(ins[0].key)}</b>`,keys:MODEL,target:".studio .gpanel",apply:st=>build(st,i),note:"One plot block is enough to pass; plotting every output shows more."}:
+        {t:(p.goals.find(g=>g.out===x.v.key)||{}).text?esc(p.goals.find(g=>g.out===x.v.key).text):`Build <b>${esc(x.v.key)}</b>${x.v.name?`: ${esc(x.v.name)}`:""}`,keys:MODEL,target:"#cv",apply:st=>build(st,i),
+          note:x.ok?(Number.isFinite(at[x.v.key])?`Check: when ${esc(story())||"the model runs"}, the console says ${esc(x.v.key)} = ${esc(showV(x.v,at[x.v.key]))}.`:""):`This formula uses something the blocks can't do, so build it by hand: ${esc(x.v.key)} = ${esc(x.v.formula)}.`})},
+    5:()=>[{t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"Every check compares the model with the problem's own numbers."}],
+    6:()=>{const k=key(), nums=numbers(), work=worked(), okA=ASM.filter(a=>a.ok).map(a=>a.t.replace(/\.\s*$/,""));
+      return [
+        {t:"Answer the question",keys:withModel(["ans"]),target:"#ans",apply:st=>{ensure(st); st.d.ans=k&&k.explainAnswer?k.explainAnswer:`${p.vars.some(v=>v.kind==="in")?`When ${story()}, `:""}the model gives ${listAnd(nums)||"no numbers yet"}.`},
+          note:k&&k.explainAnswer?"This is the model answer from your answer key.":"Made from the model's numbers. Add a model answer to the problem's answer key in the Workspace to use your own."},
+        {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why=work.length?work.join(". ")+".":"The model works each output out from the problem's numbers."},note:"A sample answer: where each number comes from."},
+        {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim=okA.length?`The model assumes: ${okA.join("; ")}. If one of these doesn't hold, the answer could change.`:"Every model leaves things out. Say one thing this one leaves out, and how it could change the answer."},note:"A sample answer, from the assumptions the model makes."}]}};
   return m}
 
 /* ================= Equation step: write the model as symbolic equations, make sense of every symbol, then solve =================
@@ -4594,9 +4835,9 @@ function diagramStep(el,m,st,ctx,spec){
   const pipeOK=p=>{const i=D.pipe[p.f]; return i!=null&&!!(p.opts[i]&&p.opts[i].ok)}, qOK=q=>{const i=D.q[q.id]; return i!=null&&!!(q.opts[i]&&q.opts[i].ok)};
   const OK={place:()=>N.every(n=>D.pl[n.id])&&X.every(x=>D.ex[x.id]),pipes:()=>pipes.every(pipeOK),links:()=>links.every(l=>has(l.a,l.b)),read:()=>why.every(qOK)};
   const PH=[]; if(spec.sort!==false) PH.push("place"); if(pipes.length) PH.push("pipes"); if(links.length) PH.push("links"); if(why.length) PH.push("read");
-  let forced=null, showAns=false, picked=null, srcSel=null, qNow=null, BUB=null, lay=null, prevKeys=null, DR=null, justDragged=false, bubT=0, flashT=0, wasDone=!!D.done;
-  const phase=()=>showAns?"done":forced||PH.find(k=>!OK[k]())||"done";
-  const past=k=>{const p=phase(); return showAns||p==="done"||(PH.indexOf(k)>=0&&PH.indexOf(p)>PH.indexOf(k))};
+  let forced=null, picked=null, srcSel=null, qNow=null, BUB=null, lay=null, prevKeys=null, DR=null, justDragged=false, bubT=0, flashT=0, wasDone=!!D.done;
+  const phase=()=>forced||PH.find(k=>!OK[k]())||"done";
+  const past=k=>{const p=phase(); return p==="done"||(PH.indexOf(k)>=0&&PH.indexOf(p)>PH.indexOf(k))};
   const placed=k=>!!(D.pl[k]||past("place")), exOn=k=>!!(D.ex[k]||past("place")), laid=p=>pipeOK(p)||past("pipes");
   const drawnLinks=()=>past("links")?links.map(l=>[l.a,l.b]):Object.keys(D.ln).reduce((a,b)=>a.concat((D.ln[b]||[]).map(s=>[s,b])),[]);
   const hash=s=>String(s).split("").reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7)%997;
@@ -4605,8 +4846,7 @@ function diagramStep(el,m,st,ctx,spec){
   const bump=()=>{st.runs=(st.runs||0)+1};
   el.innerHTML=`<div class="dgstep">${spec.intro?`<p class="lead dgintro">${spec.intro}</p>`:""}${spec.note?`<div class="dgtn">${teacherNote(spec.note)}</div>`:""}
     <div class="card dgbench" id="dgb">
-      <div class="dgtop"><ol class="dgph" id="dgph" aria-label="Diagram tasks"></ol><div class="dgtask" id="dgtask" aria-live="polite"></div>
-        ${S.teacher?`<button type="button" class="btn sm white dgans" id="dgans" aria-pressed="false">${ic("eye",2.3)}<span>Show the answer</span></button>`:""}</div>
+      <div class="dgtop"><ol class="dgph" id="dgph" aria-label="Diagram tasks"></ol><div class="dgtask" id="dgtask" aria-live="polite"></div></div>
       <div class="dgbody">
         <div class="dgside"><div class="dgqslot" id="dgqslot"></div><div id="dgside"></div></div>
         <div class="dgstage">${spec.clock?`<div class="dgsthd"><button type="button" class="dgclock" id="dgclock" data-drop="clock"></button></div>`:""}
@@ -4620,7 +4860,7 @@ function diagramStep(el,m,st,ctx,spec){
   const alive=()=>document.body.contains(bench), uid="dgp"+(++DGID), narrow=()=>cv.clientWidth<600, twoCol=()=>!matchMedia("(max-width:900px)").matches;
 
   /* drawing the canvas */
-  function draw(){const L=dgLayoutFor(spec,cv.clientWidth||900); lay=L; const [W,H]=L.vb, ph=phase(), G=dgGeo(spec,L,()=>true), act=!showAns&&ph!=="done", linking=act&&ph==="links";
+  function draw(){const L=dgLayoutFor(spec,cv.clientWidth||900); lay=L; const [W,H]=L.vb, ph=phase(), G=dgGeo(spec,L,()=>true), act=ph!=="done", linking=act&&ph==="links";
     const lk=drawnLinks(), keys=new Set([...N.filter(n=>placed(n.id)).map(n=>"n:"+n.id),...pipes.filter(laid).map(p=>"p:"+p.f),...lk.map(([a,b])=>"l:"+a+">"+b),...X.filter(x=>exOn(x.id)).map(x=>"x:"+x.id)]);
     const fresh=new Set(); if(prevKeys&&!still()) keys.forEach(k=>{if(!prevKeys.has(k)) fresh.add(k)}); prevKeys=keys;
     const fr=k=>fresh.has(k)?" dgnew":"", atS=new Set([BUB&&BUB.at,info.hidden?null:info.dataset.k].filter(Boolean)), F=k=>atS.has(k);
@@ -4645,7 +4885,6 @@ function diagramStep(el,m,st,ctx,spec){
   /* the bar on top: tasks, what to do now, progress */
   function count(k){return k==="place"?[N.filter(n=>D.pl[n.id]).length+X.filter(x=>D.ex[x.id]).length,N.length+X.length]:k==="pipes"?[pipes.filter(pipeOK).length,pipes.length]:k==="links"?[links.filter(l=>has(l.a,l.b)).length,links.length]:[why.filter(qOK).length,why.length]}
   function taskHTML(){const ph=phase();
-    if(showAns) return `<h3>The answer</h3><p>This is the finished diagram. Press <b>Show my diagram</b> to go back to the activity.</p>`;
     if(ph==="done") return `<h3>${DGTT.done} <span class="dgok">${ic("check",2.6)}</span></h3><p>${spec.toCode?rich(spec.toCode,spec.SY||{}):"Each flow or converter with arrows into it becomes a set block, and the arrows tell you which variables go into it."}</p><p class="dgagain">${ic("doc",2)}<span>You can open your diagram again from <b>Problem info</b> while you build.</span></p>`;
     const [a,b]=count(ph), ext=X.some(x=>x.to!=="clock"), tap=matchMedia("(hover:none)").matches;
     const txt={place:spec.placeLead||`Drag each card onto the diagram${tap?" (or tap a card, then tap where it goes)":""}: a stock into a box, a flow into a valve, a converter into a circle.${clockX?" The card that ticks goes on the clock"+(ext?", and a starting value goes inside its box.":"."):""}`,
@@ -4653,13 +4892,13 @@ function diagramStep(el,m,st,ctx,spec){
       links:spec.linksLead||`Drag from a quantity to the flow or converter it helps work out${tap?" (or tap one, then the other)":""}. A blue connector appears when it's right.`,
       read:spec.readLead||`Your diagram is built. ${tap?"Tap":"Hover over"} any part to read about it. Each question is about the part ringed in the diagram.`}[ph];
     return `<h3>${DGTT[ph]} <span class="dgprog">${a} of ${b}</span></h3><p>${txt}</p>`}
-  function phHTML(){const ph=phase(); return PH.map((k,i)=>{const done=OK[k](), on=k===ph&&!showAns, inner=`<span class="dgpn">${done?ic("check",2.8):i+1}</span><span>${DGTS[k]}</span>`;
+  function phHTML(){const ph=phase(); return PH.map((k,i)=>{const done=OK[k](), on=k===ph, inner=`<span class="dgpn">${done?ic("check",2.8):i+1}</span><span>${DGTS[k]}</span>`;
     return `<li>${S.teacher?`<button type="button" class="dgpp ${done?"ok":""} ${on?"on":""}" data-ph="${k}" aria-current="${on?"step":"false"}">${inner}</button>`:`<span class="dgpp ${done?"ok":""} ${on?"on":""}" ${on?'aria-current="step"':""}>${inner}</span>`}</li>`}).join("")}
 
   /* the side: cards to place, then a record of the diagram so far */
   function cardHTML(k){const n=nd(k)||xd(k); return `<button type="button" class="dgcard ${picked===k?"picked":""}" data-card="${esc(k)}" aria-pressed="${picked===k}"><span class="dgck">${esc(n.lab)}</span><span class="dgcd">${esc(n.desc||"")}${n.unit?` <i>(${esc(n.unit)})</i>`:""}</span></button>`}
   function sideHTML(){const ph=phase();
-    if(ph==="place"&&!showAns){const left=order.filter(k=>nd(k)?!D.pl[k]:!D.ex[k]);
+    if(ph==="place"){const left=order.filter(k=>nd(k)?!D.pl[k]:!D.ex[k]);
       return `<div class="dgsh"><h4>${ic("hand",2.4)}Cards</h4><span class="dgcnt">${left.length} left</span></div><div class="dgtray">${left.map(cardHTML).join("")}</div>
         ${picked?`<p class="dgpick">${ic("arrowRt",2.2)}<span>Now tap where <b>${lab(picked)}</b> goes. Tap the card again to put it back.</span></p>`:""}`}
     let h=`<div class="dgsh"><h4>${ic("diagram",2.4)}Your diagram</h4></div>`;
@@ -4667,7 +4906,7 @@ function diagramStep(el,m,st,ctx,spec){
     if(pipes.length) h+=`<div class="dgnt"><span class="dgnk">Pipes</span><ul>${pipes.map(p=>{const ok=laid(p), cur=qNow&&qNow.kind==="pipe"&&qNow.id===p.f;
       return `<li><button type="button" class="dgnq ${ok?"ok":""} ${cur?"cur":""}" data-nq="${esc(p.f)}" data-nk="pipe" ${!ok&&phase()!=="pipes"?"disabled":""}><b>${lab(p.f)}</b>${ok?`: ${p.a==="cloud"?"outside":lab(p.a)} → ${p.b==="cloud"?"outside":lab(p.b)}`:": which way?"}</button></li>`}).join("")}</ul></div>`;
     if(links.length){const got=drawnLinks(); h+=`<div class="dgnt"><span class="dgnk">Connectors <span class="dgcnt">${got.length} of ${links.length}</span></span>${got.length?`<ul>${got.map(([a,b])=>`<li class="dgnl" data-hk="${esc(a+">"+b)}">${lab(a)} → ${lab(b)}</li>`).join("")}</ul>`:`<p class="muted">None yet.</p>`}</div>`}
-    if(why.length) h+=`<div class="dgnt"><span class="dgnk">Questions</span><div class="dgqd">${why.map((q,i)=>{const ok=qOK(q), cur=qNow&&qNow.kind==="read"&&qNow.id===q.id, open=ok||phase()==="read"||showAns||phase()==="done";
+    if(why.length) h+=`<div class="dgnt"><span class="dgnk">Questions</span><div class="dgqd">${why.map((q,i)=>{const ok=qOK(q), cur=qNow&&qNow.kind==="read"&&qNow.id===q.id, open=ok||phase()==="read"||phase()==="done";
       return `<button type="button" class="dgnq dot ${ok?"ok":""} ${cur?"cur":""}" data-nq="${esc(q.id)}" data-nk="read" ${open?"":"disabled"} aria-label="Question ${i+1}${ok?", answered":""}">${ok?ic("check",2.6):i+1}</button>`}).join("")}</div></div>`;
     return h}
   function paintClock(){if(!clockB) return; const on=!clockX||exOn(clockX.id), c=spec.clock;
@@ -4754,11 +4993,11 @@ function diagramStep(el,m,st,ctx,spec){
 
   /* paint everything */
   function hints(){const ph=phase(), hz=$("#dghz",el), H=spec.hints||{}, list=ph==="place"?H.sort:ph==="pipes"?H.pipes:ph==="links"?H.links:null;
-    goalHints(hz,st,showAns||!list?null:{k:"dg-"+ph,hints:list})}
+    goalHints(hz,st,!list?null:{k:"dg-"+ph,hints:list})}
   function refresh(){const G=PH.map(k=>({k:"dg-"+k,t:DGTT[k],ok:OK[k]()})); trackGoals(st,G); const all=G.every(g=>g.ok);
     if(all&&!D.done){D.done=true; save()} const nb=$("#nextb",el); if(nb) nb.disabled=!S.teacher&&!all;
     if(all&&!wasDone){wasDone=true; setTimeout(()=>{if(alive()) celebrate($("#dgtask .dgok",el)||$("#dgtask",el),30)},60)}}
-  function paint(scroll){$(".dgbody",el).classList.toggle("ph-place",phase()==="place"&&!showAns); $("#dgph",el).innerHTML=phHTML(); $("#dgtask",el).innerHTML=taskHTML(); side.innerHTML=sideHTML(); paintClock(); draw(); hints(); refresh();
+  function paint(scroll){$(".dgbody",el).classList.toggle("ph-place",phase()==="place"); $("#dgph",el).innerHTML=phHTML(); $("#dgtask",el).innerHTML=taskHTML(); side.innerHTML=sideHTML(); paintClock(); draw(); hints(); refresh();
     if(BUB) placeBub(scroll); if(!info.hidden&&info.dataset.k) showInfo(info.dataset.k); hydrateIcons(bench)}
 
   /* questions on the diagram: one at a time, at the part they're about */
@@ -4840,7 +5079,7 @@ function diagramStep(el,m,st,ctx,spec){
   function onUp(e){if(!DR||e.pointerId!==DR.pid) return; const D0=end(); if(!D0||!D0.on) return; justDragged=true; setTimeout(()=>{justDragged=false},0); rest=[e.clientX,e.clientY];
     if(!D0.t){if(D0.kind==="link") paint(); return} if(D0.kind==="card") dropCard(D0.id,D0.t); else tryLink(D0.id,D0.t.dataset.n)}
   function onCancel(e){if(DR&&e.pointerId===DR.pid){end(); paint()}}
-  bench.addEventListener("pointerdown",e=>{if(e.button>0||showAns||DR) return; const card=e.target.closest(".dgcard"), node=!card&&phase()==="links"?e.target.closest("[data-n]"):null; if(!card&&!node) return;
+  bench.addEventListener("pointerdown",e=>{if(e.button>0||DR) return; const card=e.target.closest(".dgcard"), node=!card&&phase()==="links"?e.target.closest("[data-n]"):null; if(!card&&!node) return;
     DR={kind:card?"card":"link",id:card?card.dataset.card:node.dataset.n,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,on:false,src:card||node,pid:e.pointerId,t:null};
     addEventListener("pointermove",onMove,{passive:false}); addEventListener("pointerup",onUp); addEventListener("pointercancel",onCancel)});
 
@@ -4849,11 +5088,8 @@ function diagramStep(el,m,st,ctx,spec){
     const bq=t.closest("[data-bq]"); if(bq){answer(+bq.dataset.bq); return}
     if(t.closest("[data-bnext]")){nextQ(); return}
     if(t.closest("[data-bclose]")){setBub(null); draw(); return}
-    const pp=t.closest("[data-ph]"); if(pp&&S.teacher){const k=pp.dataset.ph; forced=k===PH.find(x=>!OK[x]())?null:k; showAns=false; srcSel=null; picked=null; openPhase(); return}
+    const pp=t.closest("[data-ph]"); if(pp&&S.teacher){const k=pp.dataset.ph; forced=k===PH.find(x=>!OK[x]())?null:k; srcSel=null; picked=null; openPhase(); return}
     const nq=t.closest("[data-nq]"); if(nq&&!nq.disabled){openQ(nq.dataset.nk,nq.dataset.nq); return}
-    if(t.closest("#dgans")){showAns=!showAns; const b=$("#dgans",el); b.setAttribute("aria-pressed",showAns); b.lastChild.textContent=showAns?"Show my diagram":"Show the answer"; picked=null; srcSel=null;
-      if(showAns){setBub(null); paint()} else openPhase(); return}
-    if(showAns) return;
     const card=t.closest(".dgcard"); if(card){const k=card.dataset.card; picked=picked===k?null:k; setBub(null); paint(); const again=$(`.dgcard[data-card="${CSS.escape(k)}"]`,el); if(again) again.focus({preventScroll:true}); return}
     const zone=t.closest("[data-start],[data-slot],[data-drop]"); if(zone&&picked){dropCard(picked,zone); return}
     const n=t.closest("[data-n]");
@@ -4933,6 +5169,175 @@ function autoDgSpec(p){const model=probModel(p), V=p.vars, by=k=>V.find(v=>v.key
     linkWhy:Object.fromEntries(tgt.map(t=>[t,`${esc(t)} uses ${deps[t].filter(has).map(esc).join(", ")}.`])),
     hints:{links:["For each output, look back at the problem: which numbers would you need to work it out? Each one is an arrow into it.","Work one output out by hand with the problem's numbers. Every quantity you used is a connector into it. An output can also use another output.",hsteps(...steps)]},
     toCode:"Each circle with arrows pointing into it becomes a <b>set</b> block in Build, and the arrows tell you which variables go into it: "+tgt.map(t=>`<b>${esc(t)}</b> uses ${deps[t].filter(has).map(esc).join(", ")}`).join("; ")+"."}}
+
+/* ================= Answer key (teacher mode). Every step has a "Show answers" button. Each press of "Show answer"
+   fills the next task's answer into the step itself (the fields, the diagram, the blocks, the equations), so the class sees it
+   where they work and the teacher can run it: the graph redraws, the fire spreads, the checks go green. "Undo answers" puts the
+   page back the way it was. Built-in missions list their tasks in their own files (MISSIONS.x.answers); the Diagram and
+   Equation steps, and every teacher-made problem, build theirs from the same specs the steps run on. ================= */
+ICP.key='<circle cx="7.6" cy="16.4" r="4.4"/><path d="M10.7 13.3 20.4 3.6"/><path d="m16.9 7.1 2.6 2.6M14.3 9.7l2.1 2.1"/>';
+
+// missions are defined before this file runs, so they hand over their answers as a function that's called when first needed
+function akLazy(m,make){let a=null; Object.defineProperty(m,"answers",{get:()=>a||(a=make()),configurable:true})}
+/* ---------- pieces for the Understand notes, which have no fields to fill ---------- */
+function akP(h){return `<p>${h}</p>`}
+function akUL(a){return `<ul class="akul">${a.map(x=>`<li>${x}</li>`).join("")}</ul>`}
+function akKV(rows){return `<dl class="akkv">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`}
+function akLab(h){return `<p class="aklab">${h}</p>`}
+
+/* ---------- reference programs, made of the same blocks students use ---------- */
+const BK={v:k=>newNode("var",{f:{v:k}}), op:(t,a,b)=>Object.assign(newNode(t),{a:{a,b}}), n:(t,f)=>newNode(t,f?{f}:{}),
+  set:(k,x)=>Object.assign(newNode("set",{f:{v:k}}),{a:{x}}), change:(k,x)=>Object.assign(newNode("change",{f:{v:k}}),{a:{x:String(x)}}),
+  say:x=>Object.assign(newNode("say"),{a:{x}}), plot:(y,x)=>newNode("plot",{f:{y,x}}), fn:(f,a)=>Object.assign(newNode("fn",{f:{fn:f}}),{a:{a}}),
+  iff:(c,y)=>Object.assign(newNode("if"),{a:{c},b:{y}}), ifelse:(c,y,n)=>Object.assign(newNode("ifelse"),{a:{c},b:{y,n}}), until:(c,y)=>Object.assign(newNode("until"),{a:{c},b:{y}})};
+// a teacher's formula as blocks (null when it uses something the blocks can't do, like min or sin)
+function akAstBlock(t){if(!t) return null; if(t.n!=null) return String(t.n); if(t.v) return BK.v(t.v);
+  if(t.f==="pow"&&t.args&&t.args.length===2) return akAstBlock({o:"^",a:t.args[0],b:t.args[1]});
+  if(t.f){if(!FNF[t.f]||!t.args||t.args.length!==1) return null; const a=akAstBlock(t.args[0]); return a==null?null:BK.fn(t.f,a)}
+  if(t.o==="neg"){const a=akAstBlock(t.a); return a==null?null:BK.op("sub","0",a)}
+  const ty={"+":"add","-":"sub","*":"mul","/":"div","^":"pow"}[t.o]; if(!ty) return null;
+  const a=akAstBlock(t.a), b=akAstBlock(t.b); return a==null||b==null?null:BK.op(ty,a,b)}
+// "cost_A = fixed_A + rate_A*g" as the tiles the Equation step builds equations from
+function akToks(src){const s=String(src).replace(/\s+/g,""), out=[]; let i=0;
+  while(i<s.length){const c=s[i];
+    if(/[0-9.]/.test(c)){let j=i; while(j<s.length&&/[0-9.]/.test(s[j])) j++; out.push(s.slice(i,j)); i=j; continue}
+    if(/[A-Za-z_]/.test(c)){let j=i; while(j<s.length&&/[A-Za-z0-9_]/.test(s[j])) j++; const w=s.slice(i,j); if(w==="ln"&&s[j]==="("){out.push("ln("); i=j+1; continue} out.push(w); i=j; continue}
+    out.push(c); i++}
+  return out}
+
+/* ---------- the Diagram step: the answers go into the diagram itself, one task at a time ---------- */
+function akDiagramTasks(spec){const N=spec.nodes, X=spec.extras||[], P=spec.pipes||[], T=[];
+  const D=st=>{st.d.dg=dgNorm(spec,st.d.dg); const g=st.d.dg; ["pl","ex","pipe","ln","q","err"].forEach(k=>g[k]=g[k]||{}); return g};
+  const ok=q=>q.opts.findIndex(o=>o.ok), open=sel=>()=>{const b=$(sel); if(b&&!b.disabled) b.click()};
+  if(spec.sort!==false) T.push({t:"Build the diagram: every card in its place",keys:["dg"],target:"#dgcv",apply:st=>{const g=D(st); N.forEach(n=>g.pl[n.id]=1); X.forEach(x=>g.ex[x.id]=1)}});
+  if(P.length) T.push({t:`Point the pipe${P.length>1?"s":""}`,keys:["dg"],target:"#dgcv",apply:st=>{const g=D(st); P.forEach(p=>g.pipe[p.f]=ok(p))},after:open(`#dgside [data-nq="${P[P.length-1].f}"][data-nk="pipe"]`)});
+  if(spec.links.length) T.push({t:`Draw the ${spec.links.length} connector${spec.links.length>1?"s":""}`,keys:["dg"],target:"#dgcv",apply:st=>{const g=D(st); spec.links.forEach(l=>{const a=g.ln[l.b]||(g.ln[l.b]=[]); if(!a.includes(l.a)) a.push(l.a)})}});
+  (spec.why||[]).forEach((q,i)=>T.push({t:`Question ${i+1}: ${q.q}`,keys:["dg"],target:"#dgcv",apply:st=>{D(st).q[q.id]=ok(q)},after:open(`#dgside [data-nq="${q.id}"][data-nk="read"]`)}));
+  return T}
+
+/* ---------- the Equation step: the same four sections, filled in ---------- */
+function akEquationTasks(spec){const SY=spec.SY, R=s=>rich(s,SY), T=[], sv=spec.solve;
+  const E=st=>{const e=st.d.eq||(st.d.eq={}); e.sym=e.sym||{}; e.ok=e.ok||{}; e.tok=e.tok||{}; e.draft=e.draft||{}; e.q=e.q||{}; e.sv=e.sv||{at:0,fin:false,ans:{},ip:null}; e.sv.ans=e.sv.ans||{}; return e};
+  const ok=q=>q.opts.findIndex(o=>o.ok), qq=id=>()=>{const b=$(`#es3 [data-qid="${CSS.escape(id)}"]`); return b&&b.closest(".qq")};
+  T.push({t:"Know your symbols",keys:["eq"],target:"#es1",apply:st=>{const e=E(st); spec.syms.forEach(k=>e.sym[k]=k)}});
+  spec.eqs.forEach((q,i)=>T.push({t:`Write the equation for ${symHTML(q.out,SY)}`,keys:["eq"],target:`#eqb${i}`,apply:st=>{const e=E(st); e.ok[q.out]=true; e.tok[q.out]=akToks(q.out+"="+q.f); delete e.draft[q.out]}}));
+  (spec.why||[]).forEach(q=>T.push({t:R(q.q),keys:["eq"],target:qq(q.id),apply:st=>{E(st).q[q.id]=ok(q)}}));
+  if(sv&&sv.steps.length) sv.steps.forEach((s,i)=>T.push({t:`Move ${i+1} of ${sv.steps.length}: ${R(s.q)}`,keys:["eq"],target:"#es4",apply:st=>{const e=E(st); e.sv.at=Math.max(e.sv.at||0,i+1); if(e.sv.pick) delete e.sv.pick[i]}}));
+  if(sv&&sv.final&&sv.final.inputs.length) T.push({t:R(sv.final.q),keys:["eq"],target:"#es4 .lfinal",apply:st=>{const e=E(st); e.sv.at=sv.steps.length; e.sv.fin=true; sv.final.inputs.forEach((x,j)=>e.sv.ans[j]=String(fmtM(x.ans)).replace(/\s/g,""))}});
+  if(sv&&sv.interp) T.push({t:R(sv.interp.q),keys:["eq"],target:"#es4 .lfinal",apply:st=>{E(st).sv.ip=ok(sv.interp)}});
+  return T}
+
+/* ---------- the engine ---------- */
+const AKS={open:false,cur:null,busy:false,run:0,msg:"",pos:null};
+// only teachers, and on claude.ai only people who can edit the page (a student who picks Teacher in Settings doesn't get it)
+function akAllowed(){return !!S.teacher&&(Cloud.local||!!Cloud.canEdit)}
+// while answers go in, badges and their pop-ups stay quiet
+function akQuiet(){return AKS.busy}
+function akTasks(m,st,s){
+  try{if(s===2){const sp=dgSpecOf(m); return sp?akDiagramTasks(sp):[]}
+    if(s===4){const sp=m.custom?autoEqSpec(m.prob):m.eq; return sp?akEquationTasks(sp):[]}
+    return (m.answers&&m.answers[s]&&m.answers[s](st))||[]}
+  catch(e){console.error("answer key",e); return []}}
+// what has been filled in on a step, and what was there before, live in the mission's saved state, so Undo survives a reload
+const akSt=(st,s)=>(st.ak&&st.ak[s])||{done:[],snap:null};
+function akKeyOf(){return AKS.cur?AKS.cur.m.id+":"+AKS.cur.step:""}
+// renderMission calls this with the step on screen; route() calls it with nothing when the page isn't a mission
+function akSync(m,st){const k=m&&st?m.id+":"+st.step:"";
+  if(AKS.busy&&k!==akKeyOf()){AKS.busy=false; AKS.run++; AKS.msg=""}
+  AKS.cur=m&&st&&akAllowed()?{m,st,step:st.step}:null; akPaint()}
+function akRender(){const c=AKS.cur; if(!c) return; stopTimers(); renderMission(c.m.id,$("#view"))}
+const akWait=(cond,ms=20000)=>new Promise(res=>{const t0=Date.now(), f=()=>{let ok=false; try{ok=cond()}catch(e){} if(ok||Date.now()-t0>ms) res(ok); else setTimeout(f,120)}; f()});
+// a click on the page, then wait for what it starts to finish (trials, the sweep, a fire burning out)
+function akClick(sel,done,ms){return async()=>{const b=$(sel); if(!b) return; b.click(); if(done) await akWait(done,ms)}}
+// bring what was just filled in into view, and make it glow for a moment
+function akGo(t){const el=typeof t==="function"?t():t?$(t):null; if(!el) return;
+  const inModal=!!el.closest(".modal"), r=el.getBoundingClientRect();
+  if(!inModal&&(r.top<90||r.top>innerHeight*.45)) window.scrollTo({top:Math.max(0,scrollY+r.top-Math.max(96,innerHeight*.16)),behavior:still()?"auto":"smooth"});
+  el.classList.remove("akflash"); void el.offsetWidth; el.classList.add("akflash"); setTimeout(()=>el.classList.remove("akflash"),2000); setTimeout(()=>akDodge(el),still()?30:480)}
+// the panel steps aside (bottom right or bottom left) when it would cover what was just filled in, unless the teacher has moved it
+function akDodge(el){if(AKS.dragged||akSheet()||!AKS.open||!el||!document.body.contains(el)) return; const pn=$("#akroot .akpanel"); if(!pn) return;
+  const t=el.getBoundingClientRect(), p=pn.getBoundingClientRect(), w=p.width, h=p.height, W=innerWidth, H=innerHeight, cur={r:W-p.right,b:H-p.bottom}, g=Math.max(16,cur.b);
+  const cover=c=>{const L=W-c.r-w, T=H-c.b-h; return Math.max(0,Math.min(L+w,t.right)-Math.max(L,t.left))*Math.max(0,Math.min(T+h,Math.min(t.bottom,H))-Math.max(T,Math.max(t.top,0)))};
+  const best=[{r:g,b:g},{r:W-w-g,b:g}].reduce((a,c)=>cover(c)<cover(a)-1?c:a,cur);
+  if(best!==cur){AKS.pos=best; akPlace()}}
+async function akFill(upto){const c=AKS.cur; if(!c||AKS.busy) return; const {m,st}=c, s=st.step, T=akTasks(m,st,s); if(!T.length) return;
+  upto=Math.min(upto,T.length-1); const was=akSt(st,s), todo=[]; for(let i=0;i<=upto;i++) if(!was.done.includes(i)) todo.push(i);
+  if(!todo.length){akGo(T[upto].target); return}
+  st.ak=st.ak||{}; const run=++AKS.run, A=st.ak[s]=st.ak[s]||{done:[],snap:null};
+  AKS.busy=true; AKS.msg=todo.some(i=>T[i].after)?"Filling in and running…":"Filling in…"; akPaint();
+  try{
+    if(s===0) todo.forEach(i=>A.done.push(i));
+    else{
+      // keep whatever these answers replace, so Undo can put it back
+      A.snap=A.snap||{}; todo.forEach(i=>{const ks=typeof T[i].keys==="function"?T[i].keys(st):(T[i].keys||[]); ks.forEach(k=>{if(!(k in A.snap)) A.snap[k]=k in st.d?{v:JSON.parse(JSON.stringify(st.d[k]))}:{none:1}})});
+      todo.forEach(i=>{if(T[i].apply) T[i].apply(st); A.done.push(i)});
+      save(); akRender();
+      for(const i of todo){if(run!==AKS.run) return; const f=T[i].after; if(!f) continue;
+        const again=await Promise.race([Promise.resolve().then(()=>f(st)),new Promise(r=>setTimeout(r,60000))]);
+        if(run!==AKS.run) return; if(again===true){save(); akRender()}}}
+    save();
+  }finally{if(run===AKS.run){AKS.busy=false; AKS.msg=""}}
+  if(run!==AKS.run) return;
+  akPaint("[data-aknext]"); setTimeout(()=>akGo(s===0?`.aknotes [data-n="${upto}"]`:T[upto].target),60)}
+function akUndo(){const c=AKS.cur; if(!c||AKS.busy) return; const {st}=c, s=st.step, A=st.ak&&st.ak[s]; if(!A) return;
+  if(A.snap) for(const k in A.snap){if(A.snap[k].none) delete st.d[k]; else st.d[k]=A.snap[k].v}
+  delete st.ak[s]; save(); if(s!==0) akRender(); akPaint("[data-aknext]"); const l=$("#aklive"); if(l) l.textContent="Answers taken out."}
+function akRoot(){let r=document.getElementById("akroot");
+  if(!r){r=document.createElement("div"); r.id="akroot"; r.innerHTML=`<div id="akbody"></div><p class="aklive" id="aklive" aria-live="polite"></p>`; document.body.appendChild(r);
+    r.addEventListener("click",akClick2); r.addEventListener("pointerdown",akDrag);
+    r.addEventListener("dblclick",e=>{if(e.target.closest(".akhd")&&!e.target.closest("button")){AKS.pos=null; AKS.dragged=false; akPlace()}});
+    r.addEventListener("keydown",e=>{if(e.key==="Escape"&&AKS.open){e.stopPropagation(); AKS.open=false; akPaint("[data-akopen]")}})}
+  return r}
+function akPaint(focus){const root=akRoot(), body=$("#akbody",root), c=AKS.cur; document.body.classList.toggle("akon",!!c);
+  $$(".aknotes").forEach(x=>x.remove());
+  if(!c){root.hidden=true; body.innerHTML=""; return}
+  const {m,st}=c, s=st.step, T=akTasks(m,st,s), N=T.length, A=akSt(st,s), done=new Set(A.done.filter(i=>i<N)), next=T.findIndex((_,i)=>!done.has(i)), last=A.done.length?A.done[A.done.length-1]:-1;
+  // Understand has nothing to fill in, so its answers become a card on the page itself
+  if(s===0&&done.size){const card=$("#stepbody .icard"); if(card) card.insertAdjacentHTML("afterend",`<section class="card aknotes" aria-label="Answer key"><div class="aknh"><span class="akchip">${ic("key",2.4)}</span><b>Answer key</b><small>only teachers see this</small></div>
+    <ol class="aknl">${T.map((t,i)=>done.has(i)?`<li data-n="${i}"><b>${t.t}</b><div class="aknb">${t.html||""}</div></li>`:"").join("")}</ol></section>`)}
+  root.hidden=false;
+  if(!AKS.open){root.style.right=root.style.bottom=""; body.innerHTML=`<button type="button" class="akfab" data-akopen aria-expanded="false">${ic("key",2.4)}<span>Show answers</span>${done.size?`<span class="akc">${done.size}/${N}</span>`:""}</button>`; akFocus(root,focus); return}
+  const old=$("#aklist",root), keep=old?old.scrollTop:0, busy=AKS.busy;
+  const rows=T.map((t,i)=>{const on=done.has(i), nx=i===next;
+    return `<li class="akrow ${on?"done":""} ${nx?"next":""}"><button type="button" class="akto" data-akto="${i}" ${busy?"disabled":""} aria-label="${on?"Show where answer":"Fill in answer"} ${i+1}"><span class="akn">${on?ic("check",3):i+1}</span><span class="akt">${t.t}${t.tag?` <em class="aktag">${esc(t.tag)}</em>`:""}</span></button></li>`}).join("");
+  const lt=last>=0&&T[last]?T[last]:null;
+  body.innerHTML=`<section class="akpanel ${busy?"busy":""}" role="region" aria-label="Answer key for ${esc(STEPS[s])}">
+    <header class="akhd" title="Drag to move it out of the way. Double-click to put it back."><span class="akchip">${ic("key",2.4)}</span><div class="akht"><b>Answer key · ${esc(STEPS[s])}</b><small>${s===0?"Answers appear on the page":"Fills each answer in on the page"} · teachers only</small></div>
+      <button type="button" class="akib" data-akclose aria-label="Close the answer key" title="Close">${ic("x",2.6)}</button></header>
+    ${N?`<div class="akprog"><span class="akbar" aria-hidden="true"><i style="width:${done.size/N*100}%"></i></span><span>${done.size} of ${N} filled in</span></div>
+    <ol class="aktasks" id="aklist">${rows}</ol>
+    ${busy?`<p class="aklast busy"><span class="akspin" aria-hidden="true"></span>${esc(AKS.msg||"Filling in…")}</p>`:lt?`<p class="aklast">${ic("check",2.6)}<span><b>Filled in:</b> ${lt.t}${lt.note?`<span class="aklnote">${lt.note}</span>`:""}</span></p>`:""}
+    <footer class="akft"><button type="button" class="btn sm" data-aknext ${next<0||busy?"disabled":""}>${next<0?`${ic("check",2.6)}All answers in`:`${ic("playf",2)}Show answer ${next+1}`}</button>${next>=0&&N>1?`<button type="button" class="btn sm white" data-akall ${busy?"disabled":""}>Show all</button>`:""}${done.size?`<button type="button" class="btn sm white" data-akundo ${busy?"disabled":""} title="Put back what was on this page before">${ic("refresh",2.4)}Undo</button>`:""}</footer>`:
+    `<p class="akempty">This step has no answers to fill in.</p>`}
+  </section>`;
+  const ls=$("#aklist",root); if(ls){ls.scrollTop=keep; const nx=$(".akrow.next",ls)||$(".akrow.done:last-of-type",ls); if(nx){const a=ls.getBoundingClientRect(), b=nx.getBoundingClientRect(); if(b.top<a.top||b.bottom>a.bottom) ls.scrollTop+=b.top-a.top-8}}
+  akPlace(); akFocus(root,focus)}
+function akFocus(root,sel){if(!sel) return; const b=$(sel,root); if(b&&!b.disabled){b.focus({preventScroll:true}); return}
+  const f=$("[data-aknext]:not([disabled]),[data-akclose],[data-akopen]",root); if(f) f.focus({preventScroll:true})}
+function akClick2(e){const t=e.target.closest("button"); if(!t||!AKS.cur) return; const {m,st}=AKS.cur, s=st.step, say=x=>{const l=$("#aklive"); if(l) l.textContent=x};
+  if(t.hasAttribute("data-akopen")){AKS.open=true; akPaint("[data-aknext]"); return}
+  if(t.hasAttribute("data-akclose")){AKS.open=false; akPaint("[data-akopen]"); return}
+  if(t.hasAttribute("data-akundo")){akUndo(); return}
+  const T=akTasks(m,st,s), N=T.length, A=akSt(st,s);
+  if(t.hasAttribute("data-aknext")){const i=T.findIndex((_,j)=>!A.done.includes(j)); if(i>=0){akFill(i); say(`Answer ${i+1} of ${N} filled in.`)} return}
+  if(t.hasAttribute("data-akall")){akFill(N-1); say(`All ${N} answers filled in.`); return}
+  if(t.dataset.akto!=null){const i=+t.dataset.akto; if(A.done.includes(i)) akGo(s===0?`.aknotes [data-n="${i}"]`:T[i].target); else{akFill(i); say(`Answers up to ${i+1} filled in.`)}}}
+// the panel can be dragged by its header, out of the way of whatever the class is looking at
+const akSheet=()=>matchMedia("(max-width:560px)").matches;
+function akDrag(e){const hd=e.target.closest(".akhd"); if(!hd||e.target.closest("button")||e.button>0||akSheet()) return;
+  const pn=hd.closest(".akpanel"), r=pn.getBoundingClientRect(), sx=e.clientX, sy=e.clientY, r0=innerWidth-r.right, b0=innerHeight-r.bottom;
+  e.preventDefault(); try{hd.setPointerCapture(e.pointerId)}catch(err){} hd.classList.add("drag");
+  const mv=ev=>{AKS.dragged=true; AKS.pos={r:r0-(ev.clientX-sx),b:b0-(ev.clientY-sy)}; akPlace()};
+  const up=()=>{hd.classList.remove("drag"); hd.removeEventListener("pointermove",mv); hd.removeEventListener("pointerup",up); hd.removeEventListener("pointercancel",up)};
+  hd.addEventListener("pointermove",mv); hd.addEventListener("pointerup",up); hd.addEventListener("pointercancel",up)}
+function akPlace(){const root=akRoot(), pn=$(".akpanel",root);
+  if(!pn||!AKS.pos||akSheet()){root.style.right=root.style.bottom=""; return}
+  const w=pn.offsetWidth, h=pn.offsetHeight, r=clamp(AKS.pos.r,8,Math.max(8,innerWidth-w-8)), b=clamp(AKS.pos.b,8,Math.max(8,innerHeight-h-8));
+  AKS.pos={r,b}; root.style.right=r+"px"; root.style.bottom=b+"px"}
+// editing rights on claude.ai are only known once the page connects, and a teacher's own answer key can arrive later
+cloudOn("ready",()=>{if(AKS.cur&&!akAllowed()) AKS.cur=null; akPaint()});
+cloudOn("keys",()=>{if(AKS.cur&&AKS.cur.m.custom&&!AKS.busy) akPaint()});
+addEventListener("resize",()=>{if(AKS.cur&&AKS.open) akPlace()});
 
 /* ================= Teacher tools: class progress, workspace, problem editor ================= */
 const LV=["Not started","Understand","Define","Diagram","Build","Equation","Test","Explain","Done"];

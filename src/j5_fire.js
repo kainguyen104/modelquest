@@ -513,4 +513,56 @@ MISSIONS.fire={
   }]
 };
 MISSIONS.fire.eq=EQ; MISSIONS.fire.dg=DG;
+/* ---- answer key (teacher mode): each task fills its answer into the step, and the run tasks run the lab and the trials.
+   The trial and sweep numbers are what any working rule gives: with p_immune = 0 and no lightning the spread doesn't depend
+   on chance, and the forests come from fixed seeds. ---- */
+akLazy(MISSIONS.fire,()=>{const v=BK.v, op=BK.op, N=BK.n;
+  const is=k=>op("eq",N("fstate"),N("fkind",{k})), become=k=>N("fbecome",{k}), count=c=>c?[BK.change("caught",1)]:[];
+  const burn=()=>BK.iff(is("2"),[become("0")]);
+  const spread=c=>BK.iff(op("lt",N("frand"),op("sub","1",v("p_immune"))),[become("2")].concat(count(c)));
+  const light=c=>BK.iff(op("lt",N("frand"),op("mul",v("p_lightning"),op("sub","1",v("p_immune")))),[become("2")].concat(count(c)));
+  const tree=(c,lit)=>BK.iff(is("1"),[BK.ifelse(op("gt",N("fnb"),"0"),[spread(c)],lit?[light(c)]:[])]);
+  const MODEL=["prog","tasks","mine","mode","P","ranOut"];
+  const build=(st,upto)=>{const d=st.d; d.prog={body:upto===0?[burn()]:[burn(),tree(upto>=3,upto>=2)]}; d.tasks=d.tasks||{};
+    if(upto>=3){d.tasks.count=true; d.mine=d.mine||[]; if(!d.mine.includes("caught")) d.mine.push("caught")}
+    if(upto>=4){d.mode="next"; d.P=Object.assign({pTree:0.85,pI:0.3,pL:0},d.P||{},{pL:0})}};
+  const works=st=>{const d=st.d; if(!d.prog||!d.tasks||!d.tasks.count||d.mode!=="next") return false; try{const C=checks(st,ruleEngine(VARS(st),d.prog)); return C.ruleOK&&C.G.filter(g=>g.k!=="run").every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)){build(st,4); st.d.ranOut=true}}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  // the Explain step needs the trials and the sweep: run them the way the Test step does, with the same seeds
+  const runs=st=>new Promise(res=>{const d=st.d, R=ruleEngine(VARS(st),d.prog||{body:[]}), mode=d.mode||"next";
+    const sweep=()=>{if(d.sweep) return res(true); const D=[]; for(let i=0;i<=12;i++) D.push(Math.round((0.3+i*0.05)*100)/100); const r=D.map(()=>[]);
+      runBatch(D.length*30,k=>trial(R,mode,{pTree:D[k%D.length],pI:0,pL:0},30,7919+k),(k,x)=>r[k%D.length].push(x),()=>{d.sweep=D.map((x,i)=>[x,r[i].reduce((a,b)=>a+b,0)/r[i].length]); save(); res(true)})};
+    if(d.trial&&d.trial.n>=200) return sweep();
+    const vals=[], p=(d.trialCfg&&d.trialCfg.p)||0.6;
+    runBatch(200,k=>trial(R,mode,{pTree:p,pI:0,pL:0},30,7000+k),(k,x)=>vals.push(x),()=>{d.trial={p,n:200,mean:vals.reduce((a,b)=>a+b,0)/200,median:median(vals),vals:vals.map(x=>Math.round(x*10)/10)}; save(); sweep()})});
+  const def=st=>st.d.def||(st.d.def={});
+  return {
+  0:()=>[
+    {t:"What's the question?",html:akP("How much should the fire district thin the forest so that a fire usually stays small?")},
+    {t:"What do we know?",html:akKV([["Each square","empty, a tree, or burning"],["A burning square","burns out after one step"],["A tree next to a fire","resists catching with chance p_immune = 0.3"],["A tree with no fire nearby","lightning hits it with chance p_lightning = 0.001 each step, and it can still resist"]])},
+    {t:"What will the model work out?",html:akP("The chance that each kind of tree catches, then a rule that every square follows each step. Running hundreds of fires at different tree densities shows how much of the forest usually burns.")},
+    {t:"Where the class should end up",html:akP("There's a tipping point near a density of <b>0.56</b>: below it most fires die out early, and above it most burn nearly everything. Thinning from <b>0.7 to 0.55</b> buys the most protection.")}],
+  1:()=>[
+    {t:"A tree next to a fire catches with probability…",keys:["def"],target:"#w-q1",apply:st=>{def(st).q1="0.7"},note:"Complement rule: it either catches or resists, so 1 − 0.3 = 0.7."},
+    {t:"A tree with no fire nearby catches with probability…",keys:["def"],target:"#w-q2",apply:st=>{def(st).q2="0.0007"},note:"Multiplication rule: lightning hits and the tree fails to resist, so 0.001 × 0.7 = 0.0007."},
+    {t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the one it doesn't."}],
+  3:()=>["A burning square <b>burns out</b>: next step it's empty","A tree <b>next to a fire</b> catches with chance <b>1 − p_immune</b>","A tree with <b>no fire nearby</b> catches only if lightning hits <b>and</b> it doesn't resist",
+      "Count how many trees <b>catch fire</b> in each step","Write each step to <b>a fresh copy</b>, then <b>Run</b> a fire until it burns out"].map((t,i)=>({t,tag:i===3?"new task":"",keys:MODEL,target:i===4?"#cv3":"#cv",
+      apply:st=>build(st,i),after:i===4?akClick("#frun",()=>/Run/.test(($("#frun")||{}).textContent||""),40000):null,
+      note:["The rule runs once for every square, every step.","Check: the P(spread) badge reads about 0.70 at p_immune = 0.3. Press Step to watch it spread.","The lightning test goes in the else part. With the rule complete, the counting task pops up: close it to go on.",
+        "The variable caught is made in Variables first. It starts at 0 every step, so it needs no set block.","Each square reads the same snapshot of the forest, so the fire moves one square per step. The bear says “Burned out!” at the end."][i]})),
+  5:()=>[
+    {t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"All five pass: fires burn out, immune trees stop the fire and resist lightning, a full forest burns, and fire moves one square per step."},
+    {t:"Run 200 fires at density 0.6",keys:["trial","trialCfg"],target:"#inv",apply:st=>{st.d.trialCfg=Object.assign(st.d.trialCfg||{},{p:0.6,n:200})},after:akClick("#trun",()=>{const t=S.missions.fire.d.trial; return !!t&&t.n>=200&&!!document.querySelector("#tres .mstat")}),
+      note:"Mean about 68%, median about 84%: most fires either die early or burn most of the forest, so the mean describes almost none of them."},
+    {t:"Where is the tipping point?",keys:["sweep"],target:"#sres",apply:()=>{},after:akClick("#srun",()=>!!S.missions.fire.d.sweep&&!!document.querySelector("#sres svg")),
+      note:"The average burn shoots up between 0.55 and 0.6: the tipping point is about 0.56."},
+    {t:"Challenge the rule (optional)",keys:["challenged"],target:"#cres",apply:()=>{},after:akClick("#crun",()=>!!document.querySelector("#cres table")),
+      note:"The each-neighbour rule burns more: about 74% against about 63%."}],
+  6:()=>[
+    {t:"Tipping point",keys:withModel(["trial","sweep"]),target:".ex .result",apply:ensure,after:st=>st.d.sweep&&st.d.trial?false:runs(st),note:"≈ 0.56 density, from the sweep."},
+    {t:"Advice: which thinning plan buys the most protection?",keys:["ad"],target:"[data-ad]",apply:st=>{st.d.ad="0.7-0.55"},note:"Thin from 0.7 to 0.55: the average burn drops from about 98% to about 38%, by far the biggest saving."},
+    {t:"Spread: what usually happens?",keys:["sp"],target:"[data-sp]",apply:st=>{st.d.sp="two"},note:"Most fires either die early or burn most of the forest."},
+    {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why="Above a density of about 0.56, trees are close enough that a fire almost always finds a path across the forest, so most fires burn nearly everything. Thinning from 0.7 to 0.55 takes the forest below the tipping point: the average burn drops from about 98% to about 38%."},note:"A sample answer. Look for a number from the sweep or the trials."},
+    {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim="Real fires have wind and slopes, and a real forest has edges instead of wrapping around. Every square changes at the same moment. My rule gives a tree the same chance whether one neighbour burns or four, and the each-neighbour rule burns more. Lightning was off in the trials."},note:"A sample answer."}]}});
 })();

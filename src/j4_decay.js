@@ -369,4 +369,40 @@ MISSIONS.decay={
   }]
 };
 MISSIONS.decay.eq=EQ; MISSIONS.decay.dg=DG;
+/* ---- answer key (teacher mode): each task fills its answer into the step. Diagram and Equation answers come from DG and EQ. ---- */
+akLazy(MISSIONS.decay,()=>{const v=BK.v, op=BK.op;
+  const REF=[()=>[BK.set("N",op("mul",v("N0"),op("pow","0.5",op("div",v("t"),v("H")))))],
+    ()=>[BK.plot("N","t")],
+    ()=>[BK.set("age",op("mul",v("H"),op("div",BK.fn("ln",op("div",v("f"),v("N0"))),BK.fn("ln","0.5"))))],
+    ()=>[BK.set("left",v("N0")),BK.set("k","0"),BK.until(op("lt",v("left"),"1"),[BK.set("left",op("mul",v("left"),"0.5")),BK.change("k",1)]),BK.say(v("k"))]];
+  const MODEL=["prog","tasks","mine","view"];
+  const build=(st,upto)=>{const d=st.d; d.prog={body:[].concat(...REF.slice(0,upto+1).map(f=>f()))}; d.tasks=d.tasks||{};
+    if(upto>=2) d.tasks.lab=true; if(upto>=3){d.tasks.museum=true; d.mine=d.mine||[]; ["left","k"].forEach(k=>{if(!d.mine.includes(k)) d.mine.push(k)})} d.view=d.view||{t:11460,f:41}};
+  const works=st=>{const d=st.d; if(!d.prog||!d.tasks||!d.tasks.museum) return false; try{return checks(st,modelRunner(VARS(st),d.prog),d.prog).every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)) build(st,REF.length-1)}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  const def=st=>st.d.def||(st.d.def={});
+  return {
+  0:()=>[
+    {t:"What's the question?",html:akP("How many years ago did the tree die? The artifact's wood still has <b>25%</b> of the carbon-14 it had when the tree died.")},
+    {t:"What do we know?",html:akKV([["When the tree died","100% of its carbon-14"],["Half-life","5,730 years: half of what's left decays every 5,730 years"],["The artifact today","25% left"],["Second sample <span class='akmeta'>arrives in Build</span>","41% left"]])},
+    {t:"What will the model work out?",html:akP("<b>N</b>, the percent of carbon-14 left after <b>t</b> years. Then the model runs backwards: <b>age</b>, the years since the tree died, from <b>f</b>, the percent that's left.")},
+    {t:"Where the class should end up",html:akP("25% left is two half-lives, so the tree died about <b>11,460 years</b> ago. The second sample, with 41% left, is about <b>7,370 years</b> old. Carbon-14 dates when the tree died, not when someone carved the wood.")}],
+  1:()=>[
+    {t:"Initial amount N₀",keys:["def"],target:"#w-n0",apply:st=>{def(st).n0="100"},note:"Every amount is a percent of what the living tree had."},
+    {t:"Half-life H",keys:["def"],target:"#w-h",apply:st=>{def(st).h="5730"},note:"Elapsed time t has nothing to type: it's what the model finds."},
+    {t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the two it doesn't."}],
+  3:()=>["Build <b>N</b>: the percent of carbon-14 left after <b>t</b> years","Plot <b>N</b> against <b>t</b>","Build <b>age</b>: how many years ago the tree died, when <b>f</b>% is left",
+      "Use a <b>loop</b> to find how many half-lives until less than 1% is left, and <b>say</b> it"].map((t,i)=>({t,tag:i>=2?"new task":"",keys:MODEL,target:i===1?".studio .gpanel":"#cv",
+      apply:st=>build(st,i),note:["Check: slide t to 5,730 and the console says N = 50%.","The curve halves every 5,730 years and never reaches 0. Close the pop-up to see the next task.",
+        "Check: slide f to 25% and the console says age = 11,460 years; at 41% it's about 7,370.","It says 7: after 6 half-lives 1.56% is left, and after 7 only 0.78%. The variables left and k are made in Variables first."][i]})),
+  5:()=>[
+    {t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"All five pass: 100%, 50% and 25% at 0, 1 and 2 half-lives, then the age block dates 41% and 25%."},
+    {t:"Bug hunt: the disappearing carbon",keys:["b1","b2","bugOK"],target:"#bw1",apply:st=>{st.d.b1="0"; st.d.b2="-50"},note:"0% at 11,460 years and −50% at 17,190: the model loses the same amount every half-life."},
+    {t:"Does the log base matter?",keys:["bases"],target:"#bout",apply:st=>{st.d.bases=["e","10","2"]},note:"No: the ratio is 1.2863 half-lives in every base."}],
+  6:()=>[
+    {t:"Estimated age",keys:withModel([]),target:".ex .result",apply:ensure,note:"≈ 11,460 years: 25% left is two half-lives, 2 × 5,730."},
+    {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why="25% left means two half-lives have passed: 100% → 50% → 25%. So t = 2 × 5,730 = 11,460 years. My age block gives the same: 5,730 × ln(0.25) ÷ ln(0.5) = 11,460."},note:"A sample answer. Look for the number of half-lives and a number from the model."},
+    {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim="The model assumes the living tree had the same share of carbon-14 as living things today, and that nothing added or removed carbon after the tree died. The half-life is a measurement, so the age is an estimate, not an exact year."},note:"A sample answer."},
+    {t:"One last check: does the answer prove someone carved the bowl that long ago?",keys:withModel(["tw","why"]),target:".modal .box",
+      apply:st=>{ensure(st); if(String(st.d.why||"").trim().length<15) st.d.why="25% left means two half-lives have passed, so about 2 × 5,730 = 11,460 years."; st.d.tw="no"},after:akClick(".ex #sub"),note:"No: it dates when the wood stopped taking in carbon. A tree can be cut long before it's carved."}]}});
 })();

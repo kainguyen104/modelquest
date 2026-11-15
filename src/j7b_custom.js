@@ -287,4 +287,49 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
       if($("#ans",el).value.trim().length<8){fb.textContent="Write your answer to the question, using a number from your model."; $("#ans",el).focus(); return}
       if($("#why",el).value.trim().length<15){fb.textContent="Add a sentence to Why? that says how your model supports your answer."; $("#why",el).focus(); return}
       fb.textContent=""; completeMission(m.id)}}];
+  /* answer key (teacher mode): each task fills its answer into the step, worked out from the teacher's formulas,
+     plus the teacher's own answer key when there is one */
+  const base={}; p.vars.filter(v=>v.kind==="in").forEach(v=>base[v.key]=v.start);
+  const KV=v=>`<b>${esc(v.key)}</b>${v.name?` <span class="akmeta">${esc(v.name)}</span>`:""}`, story=()=>ptText(p,base);
+  const key=()=>(typeof Cloud!=="undefined"&&Cloud.keys&&Cloud.keys[p.id])||null;
+  const outsOK=()=>{const model=probModel(p); return p.vars.filter(v=>v.kind==="out"&&!model.errs[v.key])};
+  // the Build answers: a set block for each output (when its formula can be made of blocks), then the plot
+  const REF=()=>{const outs=outsOK(), ins=p.vars.filter(v=>v.kind==="in"), T=outs.map(v=>{let ast=null; try{ast=parseFormula(v.formula)}catch(e){} const b=ast&&akAstBlock(ast); return {v,f:()=>b!=null?[BK.set(v.key,akAstBlock(ast))]:[],ok:b!=null}});
+    if(ins.length&&outs.length) T.push({plot:true,f:()=>outs.map(o=>BK.plot(o.key,ins[0].key)),ok:true}); return T};
+  const MODEL=["prog","mine","view"];
+  const build=(st,upto)=>{const R=REF(); st.d.prog={body:[].concat(...R.slice(0,upto+1).map(x=>x.f()))}};
+  const works=st=>{const d=st.d; if(!d.prog) return false; try{return customChecks(p,modelRunner(customVars(p,st),d.prog),probModel(p),samplePoints(p)).every(g=>g.ok)}catch(e){return false}};
+  const ensure=st=>{if(!works(st)) build(st,REF().length-1)}, withModel=more=>st=>(works(st)?[]:MODEL).concat(more);
+  const def=st=>st.d.def||(st.d.def={});
+  // written answers in plain words, from the formulas and the story's numbers
+  const sig=x=>+(+x).toPrecision(6);
+  const numbers=()=>{const at=probModel(p).at(base); return outsOK().filter(v=>Number.isFinite(at[v.key])).map(v=>`${v.key} = ${showV(v,at[v.key])}`)};
+  const worked=()=>{const model=probModel(p), at=model.at(base), env={}; p.vars.forEach(v=>{if(Number.isFinite(at[v.key])) env[v.key]=sig(at[v.key])});
+    return outsOK().filter(v=>Number.isFinite(at[v.key])).map(v=>{try{const ast=parseFormula(v.formula), sub=astSub(ast,Object.fromEntries(Object.entries(env).filter(([k])=>k!==v.key)));
+      const shown=showV(v,at[v.key]), exact=Math.abs(parseFloat(shown.replace(/[^\d.\-]/g,""))-at[v.key])<1e-9;
+      return `${v.key} = ${astText(ast,true)} = ${astText(sub,true)} ${exact?"=":"≈"} ${shown}`}catch(e){return ""}}).filter(Boolean)};
+  const listAnd=a=>a.length<2?a.join(""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];
+  m.answers={
+    0:()=>{const model=probModel(p), at=model.at(base), pars=p.vars.filter(v=>v.kind==="par"), ins=p.vars.filter(v=>v.kind==="in"), outs=p.vars.filter(v=>v.kind==="out"), k=key();
+      const res=outs.filter(v=>Number.isFinite(at[v.key])).map(v=>`<b>${esc(v.key)} = ${esc(showV(v,at[v.key]))}</b>`);
+      return [
+        {t:"What's the question?",html:akP(esc(p.question||p.explain.prompt||"No question written yet: add one in the Workspace."))},
+        {t:"What do we know?",html:akKV(pars.map(v=>[KV(v),esc(showV(v,v.val))]).concat(ins.map(v=>[KV(v),`${esc(showV(v,v.start))} in the story <span class="akmeta">slides from ${esc(showV(v,v.min))} to ${esc(showV(v,v.max))}</span>`])))},
+        {t:"What will the model work out?",html:akUL(outs.map(v=>`<b>${esc(v.key)}</b>${v.name?`: ${esc(v.name)}`:""}`))},
+        {t:"Where the class should end up",html:((res.length?akP(res.join(" · ")+(ins.length?` when ${esc(story())}`:"")):"")+(k&&k.solution&&k.solution.answer?akLab("From your answer key")+akP(esc(k.solution.answer)):""))||akP("Finish the formulas in the Workspace to see the model's answer here.")}]},
+    1:()=>{const pars=p.vars.filter(v=>v.kind==="par"), T=[];
+      if(pars.length) T.push({t:"The given numbers",keys:["def"],target:"#w-0",apply:st=>{const d=def(st); pars.forEach(v=>d["v_"+v.key]=String(v.val))},note:"Inputs and outputs have nothing to type: students slide the inputs, and the model works out the outputs."});
+      if(ASM.length) T.push({t:"Assumptions",keys:["def"],target:".dcard .callout.asm",apply:st=>{def(st).as=ASM.filter(a=>a.ok).map(a=>a.k)},note:"Ticked: every assumption the model makes. Left unticked: the ones it doesn't."});
+      return T},
+    3:()=>{const model=probModel(p), at=model.at(base), ins=p.vars.filter(v=>v.kind==="in");
+      return REF().map((x,i)=>x.plot?{t:`Plot ${x.f().length>1?"your outputs":`<b>${esc(x.f()[0].f.y)}</b>`} against <b>${esc(ins[0].key)}</b>`,keys:MODEL,target:".studio .gpanel",apply:st=>build(st,i),note:"One plot block is enough to pass; plotting every output shows more."}:
+        {t:(p.goals.find(g=>g.out===x.v.key)||{}).text?esc(p.goals.find(g=>g.out===x.v.key).text):`Build <b>${esc(x.v.key)}</b>${x.v.name?`: ${esc(x.v.name)}`:""}`,keys:MODEL,target:"#cv",apply:st=>build(st,i),
+          note:x.ok?(Number.isFinite(at[x.v.key])?`Check: when ${esc(story())||"the model runs"}, the console says ${esc(x.v.key)} = ${esc(showV(x.v,at[x.v.key]))}.`:""):`This formula uses something the blocks can't do, so build it by hand: ${esc(x.v.key)} = ${esc(x.v.formula)}.`})},
+    5:()=>[{t:"Run all checks",keys:withModel(["passed"]),target:".tests",apply:st=>{ensure(st); st.d.passed=0},note:"Every check compares the model with the problem's own numbers."}],
+    6:()=>{const k=key(), nums=numbers(), work=worked(), okA=ASM.filter(a=>a.ok).map(a=>a.t.replace(/\.\s*$/,""));
+      return [
+        {t:"Answer the question",keys:withModel(["ans"]),target:"#ans",apply:st=>{ensure(st); st.d.ans=k&&k.explainAnswer?k.explainAnswer:`${p.vars.some(v=>v.kind==="in")?`When ${story()}, `:""}the model gives ${listAnd(nums)||"no numbers yet"}.`},
+          note:k&&k.explainAnswer?"This is the model answer from your answer key.":"Made from the model's numbers. Add a model answer to the problem's answer key in the Workspace to use your own."},
+        {t:"Why?",keys:["why"],target:"#why",apply:st=>{st.d.why=work.length?work.join(". ")+".":"The model works each output out from the problem's numbers."},note:"A sample answer: where each number comes from."},
+        {t:"Limitations",keys:["lim"],target:"#lim",apply:st=>{st.d.lim=okA.length?`The model assumes: ${okA.join("; ")}. If one of these doesn't hold, the answer could change.`:"Every model leaves things out. Say one thing this one leaves out, and how it could change the answer."},note:"A sample answer, from the assumptions the model makes."}]}};
   return m}
