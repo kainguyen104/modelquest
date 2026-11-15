@@ -101,8 +101,8 @@ To run class features on your own hosting, replace the platform calls in `src/j7
 
 ## Docs
 
-- [Diagram step](images/diagram-step.md)
-- [Equation step](images/equation-step.md)
+- [Diagram step](diagram-step.md)
+- [Equation step](equation-step.md)
 
 ## Acknowledgements
 
