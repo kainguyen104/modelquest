@@ -126,20 +126,19 @@ function renderHome(v){
 /* ================= challenges (reference: Challenges) ================= */
 let FILTER="All";
 const FILTERS=[["All",null,"#FDE54B"],["Math","sigma","#DECFFD"],["Finance","trend","#B4E9FE"],["Physics","atom","#FDD6DA"],["Chemistry","flask","#C1FBE1"],["Biology","leaf","#C9AEFC"]];
-function ccardHTML(m,locked){
-  const pct=locked?0:mProgress(m.id||m.key);
-  const inner=`${img(ARTS[locked?m.key:m.art],"","","")}
-    <h3>${esc(m.title)}</h3>
+function ccardHTML(m,locked,art){
+  const pct=locked||!S.missions[m.id]?0:mProgress(m.id);
+  const inner=`${art||img(ARTS[locked?m.key:m.art],"","","")}
+    <h3 title="${esc(m.title)}">${esc(m.title)}</h3>
     <div class="row"><span class="pill ${diffCls(m.diff)}">${ic("diff",2.6)}${m.diff}</span><span class="pill time">${ic("clock",2.2)}${m.time}</span></div>
     <div class="prog"><div class="pbar"><i data-fill="${Math.max(pct,0)}%" style="width:${Math.max(pct,0)}%;background:${m.bar}"></i></div>${pct}%</div>`;
   return locked?`<div class="card ccard locked" aria-disabled="true"><span class="pill ink soon">${ic("lock",2.4)}Soon</span>${inner}</div>`
-               :`<button class="card ccard" data-go="${m.id}">${inner}</button>`;
+               :`<button class="card ccard${m.custom?" custom":""}" data-go="${esc(m.id)}">${inner}</button>`;
 }
-function customCardHTML(p){const id="p-"+p.id, st=S.missions[id], pc=st?mProgress(id):0, [icn,bg]=lookFor(p);
-  return `<button class="card ccard custom" data-go="${esc(id)}"><div class="cart" style="background:${bg}"><span class="cic">${ic(icn,2)}</span><span class="cby">${ic("users",2.4)}From your teacher</span></div>
-    <h3 title="${esc(p.title||"Untitled problem")}">${esc(p.title||"Untitled problem")}</h3>
-    <div class="row"><span class="pill ${diffCls(p.difficulty)}">${ic("diff",2.6)}${esc(p.difficulty)}</span><span class="pill time">${ic("clock",2.2)}~ ${p.minutes} min</span></div>
-    <div class="prog"><div class="pbar"><i data-fill="${pc}%" style="width:${pc}%;background:#B9A6F5"></i></div>${pc}%</div></button>`}
+function customCardHTML(p){
+  return ccardHTML({id:"p-"+p.id,custom:true,title:p.title||"Untitled problem",diff:p.difficulty,time:`~ ${p.minutes} min`,bar:"#B9A6F5"},false,
+    `<div class="cart" aria-hidden="true">${customScene(p,false)}</div>`)
+}
 function renderChallenges(v){
   const feat=MISSIONS[nextMission()];
   let list;
@@ -187,7 +186,7 @@ function renderAnalytics(v){
   </section>`;
 }
 function syncCard(){if(S.teacher) return "";
-  const t=Cloud.local?["This device only","Your progress is saved in this browser. Open ModelQuest on claude.ai to share it with your teacher."]:
+  const t=Cloud.local?["This device only","Your progress is saved in this browser."]:
     !Cloud.ready?["Connecting…","Checking whether your teacher can see your progress."]:Cloud.writeOK===false?["Not shared yet","Your progress is saved in this browser, but your teacher can't see it. Ask your teacher to give you Contributor access to this page."]:
     ["Shared with your teacher","Your teacher can see how far you got, your answers and your block models."];
   return `<div class="card synccard ${Cloud.writeOK===false?"warn":Cloud.local?"":"ok"}"><span class="sdot"></span><div><b>${t[0]}</b><p>${t[1]}</p></div></div>`}
@@ -270,7 +269,8 @@ function introStep(el,m,st,ctx){
   el.innerHTML=`<div class="scene">${m.scene()}</div>
    <div class="card icard">
      <div class="top"><div class="chip" ${m.introBg?`style="background:${m.introBg}"`:""}>${m.introChip||ic(m.introIcon||m.icon,2.3)}</div><span class="vsep"></span>
-       <div><h1>${esc(m.title)}</h1><p>${m.brief}</p></div></div>
+       <div><h1${m.title.length>34?' class="long"':""}>${esc(m.title)}</h1>${m.brief?`<p>${m.brief}</p>`:""}
+         ${m.introProblem?`<button class="btn sm white intro-problem" data-prob aria-haspopup="dialog">${ic("doc",2.2)}Problem info</button>`:""}</div></div>
      <div class="meta"><span>${CIC.flaskPurple}${esc(m.subj)}</span><span class="vsep"></span><span>${CIC.capTeal}${esc(m.grade)}</span><span class="vsep"></span>
        <span>${CIC.clockRed}≈ ${esc(m.minutes)} minutes</span><span class="vsep"></span>
        <button class="btn" id="go1">Start ${ic("arrowR",2.8)}</button></div>
@@ -335,9 +335,10 @@ function assumptionsCheck(el,list,d,min=2){d.as=$$("[data-as]",el).filter(c=>c.c
 function varTable(V){return `<div class="tw"><table class="tbl vt"><thead><tr><th>Variable</th><th>What it means</th><th>Value</th></tr></thead><tbody>${Object.keys(V).map(k=>{const x=V[k];
   return `<tr><td><span class="vchip" data-var="${esc(k)}">${esc(x.label||k)}</span></td><td>${esc(x.name)}${x.unit?` <span class="muted">(${esc(x.unit)})</span>`:""}</td><td>${x.kind==="in"?"you slide it":x.kind==="out"?"your model finds it":x.kind==="mine"?"your variable":esc(x.show?x.show(x.val):fmt(x.val,4).replace(/\.?0+$/,""))}</td></tr>`}).join("")}</tbody></table></div>`}
 function problemModal(m,st){const sp=dgSpecOf(m), dg=sp&&dgDone(st)?`<h3 class="ph">Your diagram</h3>${dgStatic(sp,innerWidth<640)}`:"";
-  const md=modal(`<div class="probhd"><div class="chip" style="background:${m.chip}">${m.chipIcon||ic(m.icon,2.4)}</div><div><div class="eyebrow">Problem info</div><h2>${esc(m.title)}</h2></div><button class="xbtn" data-close aria-label="Close">${ic("x",3)}</button></div>
+  const md=modal(`<div class="probhd"><div class="chip" style="background:${m.chip}">${m.chipIcon||ic(m.icon,2.4)}</div>
+    <div><div class="eyebrow">Problem info</div><h2>${esc(m.title)}</h2></div><button class="xbtn" data-close aria-label="Close">${ic("x",3)}</button></div>
     <div class="probbody">${m.problem(st)}${dg}</div>
-    <div style="display:flex;justify-content:flex-end;margin-top:2.6rem"><button class="btn" data-close>${st.step<=1?"Back to Define":st.step===2?"Back to my diagram":"Back to my model"} ${ic("arrowR",2.6)}</button></div>`); md.el.classList.add("wide"); if(dg&&typeof tipBind==="function") tipBind(md.el); return md}
+    <div style="display:flex;justify-content:flex-end;margin-top:2.6rem"><button class="btn" data-close>${st.step===0?"Back to Understand":st.step===1?"Back to Define":st.step===2?"Back to my diagram":"Back to my model"} ${ic("arrowR",2.6)}</button></div>`); md.el.classList.add("wide"); if(dg&&typeof tipBind==="function") tipBind(md.el); return md}
 // Pop-up tasks that arrive while students build
 function taskPopup(o){const md=modal(`<img class="peek" src="${A(BEARS.wave)}" alt=""><div class="eyebrow" style="color:#D9466B">${esc(o.eyebrow||"Mission update")}</div><h2 style="margin-top:1.2rem">${o.title}</h2><div class="taskbody">${o.html}</div>
     <div style="display:flex;justify-content:flex-end;margin-top:2.6rem"><button class="btn" data-close>${o.btn||"Let's do it"} ${ic("arrowR",2.6)}</button></div>`,o.onClose);

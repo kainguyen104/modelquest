@@ -5,7 +5,7 @@ ICP.upload='<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4.5 14.5V18a2 2 0
 ICP.pencil='<path d="M4.2 19.8l1.1-4.5L15.7 4.9a2.1 2.1 0 0 1 3 0l.4.4a2.1 2.1 0 0 1 0 3L8.7 18.7z"/><path d="M13.9 6.7l3.4 3.4"/>';
 ICP.arrowD='<path d="M12 4.5v15M5.5 13l6.5 6.5 6.5-6.5"/>';
 ICP.wand='<path d="M4.5 19.5 14.5 9.5"/><path d="M13 8l3 3"/><path d="M17.5 3v3.4M15.8 4.7h3.4M20 10v2.4M18.8 11.2h2.4M9.8 3.2v2.4M8.6 4.4H11"/>';
-const Cloud={ready:false,local:true,db:null,user:null,sample:null,assets:null,uid:"local",me:null,canEdit:true,isOwner:false,
+const Cloud={ready:false,local:true,db:null,user:null,sample:null,assets:null,geminiImport:false,geminiLocked:false,hosted:false,directUploadLimit:0,largeUploads:false,uid:"local",me:null,canEdit:true,isOwner:false,
   problems:{},keys:{},progress:{},progressLoaded:false,config:{hints:true},subs:{},slow:{},err:{},writeOK:null,ev:new EventTarget()};
 const cloudOn=(n,f)=>Cloud.ev.addEventListener(n,f);
 const cloudEmit=n=>Cloud.ev.dispatchEvent(new Event(n));
@@ -40,6 +40,7 @@ function localDB(){
 
 /* ---------- start-up ---------- */
 async function cloudInit(){
+  const geminiStatus=getGeminiStatus();
   let db=null,user=null,sample=null,assets=null;
   try{if(window.claude&&typeof window.claude.use==="function")
     [db,user,sample,assets]=await Promise.all(["db","user","sample","assets"].map(n=>window.claude.use(n).catch(()=>null)))}catch(e){}
@@ -48,6 +49,13 @@ async function cloudInit(){
     const me=user?await user.me():null; Cloud.me=me; Cloud.uid=me&&me.id; Cloud.canEdit=!!(me&&me.canEdit); Cloud.isOwner=!!(me&&me.isOwner);
     Cloud.canWrite=user?await user.can("data.write"):null}
   else{Cloud.db=localDB(); Cloud.local=true; Cloud.uid="local"; Cloud.canEdit=true}
+  const capabilities=await geminiStatus;
+  Cloud.hosted=!!capabilities;
+  Cloud.geminiImport=capabilities?.available===true;
+  Cloud.geminiLocked=capabilities?.requiresAccess===true;
+  Cloud.directUploadLimit=capabilities?.directUploadLimit||0;
+  Cloud.largeUploads=capabilities?.largeUploads===true;
+  if(Cloud.geminiLocked&&!capabilities.authorized) setTeacherAiToken("");
   // first visit by someone who can edit the page: start them as a teacher
   if(!Cloud.local&&Cloud.canEdit&&!S.roleSet){S.role="teacher"; S.teacher=true; save(); applyRole()}
   Cloud.ready=true;
@@ -161,7 +169,7 @@ function normProblem(x){x=x&&typeof x==="object"?x:{};
   const o={id:str(x.id,40)||newId(),title:strW(x.title,90),topic:strW(x.topic,60),area:str(x.area,40),grade:GRADES.includes(x.grade)?x.grade:"High School",
     difficulty:DIFFS.includes(x.difficulty)?x.difficulty:"Medium",minutes:clamp(Math.round(numOr(x.minutes,30)),5,120),
     practices:[...new Set((Array.isArray(x.practices)?x.practices:[]).map(s=>String(s).toUpperCase().replace(/[^A-Z0-9]/g,"")).filter(s=>/^MP[1-8]$/.test(s)))],
-    story:str(x.story,3000),question:str(x.question,600),status:x.status==="published"?"published":"draft",
+    brief:str(x.brief,360),story:str(x.story,3000),question:str(x.question,600),status:x.status==="published"?"published":"draft",
     createdAt:numOr(x.createdAt,Date.now()),updatedAt:numOr(x.updatedAt,Date.now()),author:str(x.author,80),
     source:x.source&&typeof x.source==="object"?{name:str(x.source.name,120),type:str(x.source.type,20),asset:str(x.source.asset,40)}:null,
     vars:[],assumptions:[],goals:[],steps:{},explain:{prompt:str(x.explain&&x.explain.prompt,600)}};
@@ -189,7 +197,7 @@ function problemIssues(p){const out=[], m=probModel(p), V=p.vars;
   if(!p.assumptions.some(a=>a.ok)) out.push("Add at least one assumption the model makes.");
   if(!p.explain.prompt) out.push("Write the question students answer in Explain.");
   return out}
-const PROB_FIELDS=["title","topic","area","grade","difficulty","minutes","practices","story","question","status","createdAt","updatedAt","author","source","vars","assumptions","goals","steps","explain"];
+const PROB_FIELDS=["title","topic","area","grade","difficulty","minutes","practices","brief","story","question","status","createdAt","updatedAt","author","source","vars","assumptions","goals","steps","explain"];
 function registerProblems(){for(const id in Cloud.problems){const p=Cloud.problems[id]; MISSIONS["p-"+id]=customMission(p)}}
 async function saveProblem(p,key){p=normProblem(p); p.updatedAt=Date.now(); if(!p.author&&Cloud.uid) p.author=Cloud.uid;
   const pub={}; PROB_FIELDS.forEach(k=>pub[k]=p[k]);
@@ -200,17 +208,26 @@ async function deleteProblem(id){await Cloud.db.doc("problems/"+id).delete(); tr
 
 /* ---------- reading files teachers upload ---------- */
 const VENDOR={mammoth:"https://cdn.jsdelivr.net/npm/mammoth@1.11.0/mammoth.browser.min.js",pdfw:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
-  pdf:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",xlsx:"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"};
+  pdf:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",xlsx:"https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"};
+const HOSTED_VENDOR={mammoth:"/node_modules/mammoth/mammoth.browser.min.js",xlsx:"/node_modules/xlsx/dist/xlsx.full.min.js"};
 const LOADED={};
-function loadLib(k){const url=(window.MQ_VENDOR&&window.MQ_VENDOR[k])||VENDOR[k];
+function loadLib(k){const url=window.MQ_VENDOR?.[k]||(Cloud.hosted&&HOSTED_VENDOR[k])||VENDOR[k];
   return LOADED[k]||(LOADED[k]=new Promise((res,rej)=>{const s=document.createElement("script"); s.src=url; s.async=true; s.onload=()=>res(); s.onerror=()=>{delete LOADED[k]; rej(new Error("The file reader couldn't load. Check your connection and try again."))}; (document.head||document.body).appendChild(s)}))}
 const FILE_TYPES=".docx,.pdf,.xlsx,.xls,.ods,.csv,.txt,.md,.png,.jpg,.jpeg,.webp,.gif";
-async function readProblemFile(file,onStep){
+const GEMINI_MEDIA={pdf:"application/pdf",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif"};
+async function readProblemFile(file,onStep,nativeMedia=false){
   const ext=(file.name.split(".").pop()||"").toLowerCase(); let text="", images=[];
   if(file.size>25*1024*1024) throw new Error("That file is over 25 MB. Try a smaller file.");
+  if(nativeMedia&&Object.hasOwn(GEMINI_MEDIA,ext)) return {text,images,ext,mediaType:GEMINI_MEDIA[ext]};
   if(ext==="doc") throw new Error("Old .doc files can't be read here. Save it as .docx or PDF and upload that.");
   if(ext==="docx"){onStep&&onStep("Reading the Word file…"); await loadLib("mammoth"); text=(await window.mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()})).value}
-  else if(ext==="pdf"){onStep&&onStep("Reading the PDF…"); await loadLib("pdfw"); await loadLib("pdf"); const lib=window.pdfjsLib;
+  else if(ext==="pdf"){onStep&&onStep("Reading the PDF…"); let lib;
+    if(Cloud.hosted&&!window.MQ_VENDOR?.pdf){
+      lib=await import("/node_modules/pdfjs-dist/build/pdf.min.mjs");
+      lib.GlobalWorkerOptions.workerSrc="/node_modules/pdfjs-dist/build/pdf.worker.min.mjs";
+    }else{
+      await loadLib("pdfw"); await loadLib("pdf"); lib=window.pdfjsLib;
+    }
     const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise; const n=Math.min(doc.numPages,20), parts=[];
     for(let i=1;i<=n;i++){const pg=await doc.getPage(i), tc=await pg.getTextContent(); let line="", lastY=null, out=[];
       tc.items.forEach(it=>{const y=it.transform?Math.round(it.transform[5]):0; if(lastY!=null&&Math.abs(y-lastY)>2){out.push(line); line=""} line+=(line&&!line.endsWith(" ")&&!/^\s/.test(it.str)?" ":"")+it.str; lastY=y});
@@ -227,16 +244,72 @@ async function readProblemFile(file,onStep){
   return {text:text.trim(),images,ext}}
 
 /* ---------- the AI assistant ---------- */
-const aiReady=()=>!!Cloud.sample;
+const aiReady=()=>Cloud.geminiImport||!!Cloud.sample;
+const IMPORT_API="/api/import-problem";
+const AI_TOKEN_KEY="modelquest.aiToken";
+function teacherAiToken(){try{return sessionStorage.getItem(AI_TOKEN_KEY)||""}catch{return ""}}
+function setTeacherAiToken(token){
+  try{if(token) sessionStorage.setItem(AI_TOKEN_KEY,token); else sessionStorage.removeItem(AI_TOKEN_KEY)}catch{}
+}
+function aiHeaders(token=teacherAiToken()){return token?{Authorization:"Bearer "+token}:{}}
+async function getGeminiStatus(token=teacherAiToken()){
+  if(!/^https?:$/.test(location.protocol)) return null;
+  try{
+    const r=await fetch(IMPORT_API,{headers:aiHeaders(token),signal:AbortSignal.timeout(5000)});
+    if(!r.ok) return null;
+    const status=await r.json();
+    return typeof status?.available==="boolean"?status:null;
+  }catch{return null}
+}
+async function aiRequest(url,options){
+  const r=await fetch(url,options);
+  const data=await r.json().catch(()=>null);
+  if(!r.ok){
+    if(r.status===401) setTeacherAiToken("");
+    throw {code:data?.code||(r.status===413?"file_too_large":"unavailable")}
+  }
+  if(!data) throw {code:"invalid_json"};
+  return data
+}
+async function geminiImportFile(file,got,signal){
+  const options={method:"POST",signal,headers:aiHeaders()};
+  if(got.mediaType&&Cloud.directUploadLimit&&file.size>Cloud.directUploadLimit){
+    if(!Cloud.largeUploads) throw {code:"large_upload_unavailable"};
+    options.headers["Content-Type"]="application/json";
+    const ticket=await aiRequest("/api/upload-ticket",{
+      ...options,body:JSON.stringify({size:file.size,mimeType:got.mediaType})
+    });
+    const upload=await fetch(ticket.uploadUrl,{method:"PUT",headers:{"Content-Type":got.mediaType},body:file,signal});
+    if(!upload.ok) throw {code:upload.status===413?"file_too_large":"upload_failed"};
+    options.body=JSON.stringify({name:file.name.slice(0,120),blobPath:ticket.pathname});
+  }else if(got.mediaType){
+    options.headers["Content-Type"]=got.mediaType;
+    options.headers["X-File-Name"]=encodeURIComponent(file.name.slice(0,120));
+    options.body=file;
+  }else{
+    options.headers["Content-Type"]="application/json";
+    options.body=JSON.stringify({name:file.name.slice(0,120),text:got.text.slice(0,40000)});
+  }
+  const data=await aiRequest(IMPORT_API,options);
+  if(!data||!data.title||!Array.isArray(data.vars)) throw {code:"invalid_json"};
+  return data;
+}
 function aiErrText(e){const c=e&&e.code;
-  return c==="not_granted"?"The AI assistant needs your OK. Allow it when claude.ai asks, then try again.":c==="rate_limited"?"The AI is busy, or you've reached a usage limit. Wait a little and try again.":
+  return c==="ai_access_required"?"Choose AI access and enter your teacher code to continue.":c==="not_granted"?"The AI assistant needs your OK. Allow it when claude.ai asks, then try again.":c==="rate_limited"?"The AI is busy, or you've reached a usage limit. Wait a little and try again.":
     c==="invalid_json"?"The AI's answer came back in the wrong shape. Try again.":c==="refused"?"The AI declined that request. Try rewording it.":c==="cancelled"?"Stopped.":
     c==="sampling_disabled"?"Claude isn't available for this account.":c==="prompt_too_large"?"That's too much text for one request. Try a shorter file.":c==="images_unavailable"?"Pictures can't be sent to the AI here. Try a PDF or Word file.":
-    c==="session_expired"?"Your claude.ai session ended. Sign in again, then try again.":"Something went wrong reaching the AI. Try again."}
+    c==="session_expired"?"Your claude.ai session ended. Sign in again, then try again.":
+    c==="invalid_file"?"Gemini couldn't read that file. Check that it opens and try uploading it again.":
+    c==="file_too_large"?"That file is too large for AI import. Try a smaller file.":
+    c==="large_upload_unavailable"?"Large PDFs and images need storage configured on this site. For now, use a PDF or image up to 4 MB.":
+    c==="upload_failed"?"The file couldn't be uploaded. Try again.":
+    c==="gemini_config"?"Gemini isn't available. Check the server's API key and model settings.":
+    c==="timeout"?"Gemini took too long to read the file. Try again.":"Something went wrong reaching the AI. Try again."}
 const PRACTICE_TEXT=k=>{const p=PRACTICES.find(x=>x[0]===k); return p?`${k} (${p[1]})`:k};
 const SCHEMA_TEXT=`Reply with only one JSON object of this shape (no other text):
 {"title": "a short title, at most 8 words", "topic": "2-4 words",  "area": string, "practices": ["MP4", ...], "grade": "Middle School"|"High School"|"College", "difficulty": "Easy"|"Medium"|"Hard", "minutes": number,
- "story": "the problem information students read: 2-5 sentences that give every number the model needs",
+ "brief": "a student-facing introduction in two or three short sentences, at most 360 characters",
+ "story": "the full problem in short paragraphs, with all the information and numbers the model needs",
  "question": "the decision or question the finished model answers",
  "vars": [ {"key": "g", "name": "data used in a month", "unit": "GB", "kind": "in", "min": 0, "max": 30, "step": 0.5, "start": 8},
            {"key": "fee_A", "name": "Plan A's monthly fee", "unit": "$", "kind": "par", "val": 20},
@@ -282,6 +355,11 @@ function aiCheckPrompt(p,key){const cur=Object.assign({},p,{solution:key&&key.so
   return `Check this ModelQuest math-modeling problem for mistakes a teacher would want to fix before students see it: numbers in the vars that don't match the story, formulas that don't match the story or the solution, wrong units, input ranges that don't make sense, assumptions marked right or wrong incorrectly, hints that give away the whole answer, and language that's wrong for the grade.\n${JSON.stringify(cur)}\nReply with only a JSON object: {"ok": true|false, "issues": ["one short sentence per problem, most important first"], "praise": "one sentence on what works"}`}
 function splitAI(x){x=x&&typeof x==="object"?x:{};
   return {p:normProblem(x),key:{solution:{steps:str(x.solution&&x.solution.steps,4000),answer:str(x.solution&&x.solution.answer,1200)},explainAnswer:str(x.explainAnswer,1200),notes:str(x.notes,2000)}}}
-async function aiJSON(prompt,o={}){if(!Cloud.sample) throw {code:"unavailable"};
+async function aiJSON(prompt,o={}){
+  if(Cloud.geminiImport) return aiRequest("/api/teacher-ai",{
+    method:"POST",signal:o.signal,headers:{"Content-Type":"application/json",...aiHeaders()},
+    body:JSON.stringify({action:o.action||"draft",prompt})
+  });
+  if(!Cloud.sample) throw {code:"unavailable"};
   const opts={signal:o.signal,cache:false}; if(o.onProgress) opts.onText=({text})=>o.onProgress(text.length); if(o.images&&o.images.length) opts.images=o.images; if(o.tier) opts.modelTier=o.tier;
   return Cloud.sample.json(prompt,opts)}

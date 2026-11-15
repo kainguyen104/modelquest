@@ -62,7 +62,74 @@ function customChecks(p,R,model,pts){const G=[], outs=p.vars.filter(v=>v.kind===
         hsteps("Open <b>Graph</b> and drag a <b>plot</b> block to the end of your program.",`Choose <b>${esc(outs[0].key)}</b> in its first menu and <b>${esc(ins[0].key)}</b> in its second.`,...(outs.length>1?[`Add one more plot block for ${outs.slice(1).map(o=>`<b>${esc(o.key)}</b>`).join(" and ")}, also against ${esc(ins[0].key)}.`]:[]),`Slide ${esc(ins[0].key)} and watch the point move along your graph.`)]})}
   return G}
 function teacherNote(t){return t?`<div class="callout tnote"><span class="ci">${CIC.bulb}</span><span class="vsep"></span><div><h4>From your teacher</h4><p>${esc(t)}</p></div></div>`:""}
-function customScene(p){const [icn,bg]=lookFor(p);
+const storySentences=s=>s.split(/(?<=[.!?…])\s+(?=[\p{Lu}\p{Lo}])/u);
+
+function customBrief(p){
+  const sentences=storySentences((p.brief||p.story).trim().replace(/\s+/g," "));
+  const selected=[];
+  for(const sentence of sentences.slice(0,p.brief?3:1)){
+    if(selected.join(" ").length+sentence.length>360) break;
+    selected.push(sentence);
+  }
+  if(!selected.length&&sentences[0]) selected.push(strW(sentences[0],280)+"…");
+  if(selected.length===1&&p.question&&selected[0]!==p.question&&selected[0].length+p.question.length<360) selected.push(p.question);
+  return selected.join(" ")
+}
+function mathSymbol(key){
+  const indexed=/^([A-Za-z]+)_?(\d+)$/.exec(key)||/^([A-Za-z]+)_([A-Za-z0-9]+)$/.exec(key);
+  if(indexed) return indexed[1]+"_{"+indexed[2]+"}";
+  return key.length===1?key:"\\mathrm{"+key.replace(/_/g,"\\_")+"}"
+}
+function problemMathHTML(tex,display=false){
+  if(!window.katex) return '<span class="math-fallback">'+esc(tex)+'</span>';
+  return window.katex.renderToString(tex,{displayMode:display,throwOnError:false,trust:false,strict:"ignore",maxExpand:200,maxSize:20,output:"htmlAndMathml"})
+}
+function mathText(text,vars=[],boldNumbers=false){
+  const known=new Set(vars.map(v=>v.key));
+  // Single dollar signs remain ordinary text so prices are never treated as delimiters.
+  const tokens=/\\\(([\s\S]*?)\\\)|\\\[([\s\S]*?)\\\]|\$\$([\s\S]*?)\$\$/g;
+  const plain=s=>s.split(/([A-Za-z][A-Za-z0-9_]*|(?<![\p{L}\p{N}_-])(?:[$€£]\s*)?[−-]?\d+(?:[.,]\d+)*(?:[eE][+-]?\d+)?%?(?![\p{L}\p{N}_]))/gu).map(part=>{
+    if(known.has(part)||/^[A-Za-z]_(?:[A-Za-z]|\d+)$/.test(part)) return problemMathHTML(mathSymbol(part));
+    if(boldNumbers&&/^(?:[$€£]\s*)?[−-]?\d/.test(part)) return "<strong>"+esc(part)+"</strong>";
+    return esc(part)
+  }).join("");
+  let html="",at=0;
+  for(const token of text.matchAll(tokens)){
+    html+=plain(text.slice(at,token.index));
+    const display=token[2]!==undefined||token[3]!==undefined;
+    html+='<span class="'+(display?"problem-equation":"problem-math")+'">'+problemMathHTML(token[1]??token[2]??token[3],display)+"</span>";
+    at=token.index+token[0].length
+  }
+  return html+plain(text.slice(at))
+}
+function problemCopy(story,vars){
+  if(!story) return "";
+  const math=[];
+  const prose=story.replace(/\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$/g,token=>{
+    math.push(token); return "\uE000"+(math.length-1)+"\uE001"
+  });
+  const sections=prose.split(/\n[ \t]*\n/).flatMap(block=>{
+    const sentences=storySentences(block.trim());
+    if(block.length<260||sentences.length<3) return [block];
+    const paragraphs=[];
+    for(let i=0;i<sentences.length;i+=2) paragraphs.push(sentences.slice(i,i+2).join(" "));
+    return paragraphs
+  });
+  return '<div class="problem-copy">'+sections.filter(s=>s.trim()).map(s=>{
+    const restored=s.replace(/\uE000(\d+)\uE001/g,(_,i)=>math[+i]);
+    return '<p class="lead">'+mathText(restored.trim(),vars,true)+'</p>'
+  }).join("")+"</div>"
+}
+function importedFacts(vars){
+  const given=vars.filter(v=>v.kind==="par");
+  if(!given.length) return "";
+  return `<dl class="pcards imported-facts">${given.map(v=>{
+    const value=v.val.toLocaleString("en-US",{maximumSignificantDigits:21});
+    const quantity=v.unit==="$"?(+v.val.toFixed(2)===v.val?money(v.val):`$${value}`):v.unit==="%"?`${value}%`:[value,v.unit].filter(Boolean).join(" ");
+    return `<div class="pcard"><dt>${esc(capFirst(v.name||v.key))}</dt><dd>${esc(quantity)}</dd></div>`
+  }).join("")}</dl>`
+}
+function customScene(p,interactive=true){const [icn,bg]=lookFor(p);
   return `<svg viewBox="0 0 1364 555" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="1364" height="555" fill="${bg}"/>
     <g opacity=".55" fill="#fff">${Array.from({length:12},(_,i)=>`<circle cx="${60+i*115}" cy="${48+(i%3)*22}" r="5"/>`).join("")}</g>
     <rect x="0" y="430" width="1364" height="125" fill="#F6E2CF" stroke="${INK}" stroke-width="5"/>
@@ -75,10 +142,10 @@ function customScene(p){const [icn,bg]=lookFor(p);
     <rect x="540" y="388" width="40" height="44" fill="#E4DBFB" stroke="${INK}" stroke-width="5"/>
     <g transform="translate(110 150)"><rect width="150" height="150" rx="34" fill="#FFFDFB" stroke="${INK}" stroke-width="7"/><g transform="translate(27 27) scale(4)" fill="none" stroke="${INK}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${ICP[icn]||ICP.sigma}</g></g>
     <g transform="translate(860 120)"><rect width="96" height="96" rx="24" fill="#FDE14D" stroke="${INK}" stroke-width="6"/><g transform="translate(18 18) scale(2.5)" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round">${ICP.code}</g></g>
-    </svg><img class="sbear talk" src="${A(BEARS.clip)}" alt="ModelQuest bear" data-sx=".6" data-sy=".08" style="right:5%;top:20%;width:24%">`}
+    </svg><img class="sbear${interactive?" talk":""}" src="${A(BEARS.clip)}" alt="${interactive?"ModelQuest bear":""}" data-sx=".6" data-sy=".08" style="right:5%;top:20%;width:24%">`}
 function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
   const m={id,custom:true,prob:p,title:p.title||"Untitled problem",icon:icn,chip:bg,introBg:bg,defBg:bg,bar:"#B9A6F5",
-    brief:esc(p.story||""),subj:[p.topic,p.area].filter(Boolean).join(", ")||"Math modeling",grade:p.grade,minutes:p.minutes,tags:[p.topic||"Math"],diff:p.difficulty,time:`~ ${p.minutes} min`,
+    brief:esc(customBrief(p)),introProblem:true,subj:[p.topic,p.area].filter(Boolean).join(", ")||"Math modeling",grade:p.grade,minutes:p.minutes,tags:[p.topic||"Math"],diff:p.difficulty,time:`~ ${p.minutes} min`,
     scene:()=>customScene(p),
     modeDesc:["Read the problem.","Name what you know and what you're solving for.","Draw what depends on what.","Build a model with code blocks.","Write your model as an equation, then use it.","Check your model against the problem's numbers.","Answer the question with your model."],
     doneLine:`You built a model for “${p.title}”, checked it, and used it to answer the question.`,
@@ -86,8 +153,8 @@ function customMission(p){const id="p-"+p.id, [icn,bg]=lookFor(p);
     evidence:st=>[["Checks passed",st.d.passed!=null?`${st.d.passed} / ${st.d.passedOf||"?"}`:"—"],["Answer",st.d.ans?"Written":"—"]],
     problem:st=>{const V=customVars(p,st), as=(st.d.def&&st.d.def.as)||p.assumptions.map((a,i)=>a.sug?"a"+i:null).filter(Boolean);
       const src=p.source&&p.source.asset?`<p class="ptext"><a class="srclink" href="/_blob/${esc(p.source.asset)}" target="_blank" rel="noopener">${ic("doc",2)} Open the original file${p.source.name?`: ${esc(p.source.name)}`:""}</a></p>`:"";
-      const head=`<p class="lead" style="margin-top:0">${esc(p.story)}</p>${p.question?`<h3 class="ph">The question</h3><p class="ptext">${esc(p.question)}</p>`:""}`;
-      if(st.step<=1) return head+`<h3 class="ph">What you'll define</h3><ul class="plist">${p.vars.map(v=>`<li><b>${esc(v.key)}</b>: ${esc(v.name||"")}${v.unit?` (${esc(v.unit)})`:""}${v.kind==="in"?". You'll slide this.":v.kind==="out"?". Your model finds this.":". Find its value in the problem."}</li>`).join("")}</ul>${src}`;
+      const head=`${problemCopy(p.story,p.vars)}${importedFacts(p.vars)}${p.question?`<h3 class="ph">The question</h3><p class="ptext">${mathText(p.question,p.vars)}</p>`:""}`;
+      if(st.step<=1) return head+(p.vars.length?`<h3 class="ph">What you'll define</h3><ul class="plist">${p.vars.map(v=>`<li>${problemMathHTML(mathSymbol(v.key))} — ${mathText(v.name||v.key,p.vars)}${v.unit?` (${esc(v.unit)})`:""}${v.kind==="in"?". You'll slide this.":v.kind==="out"?". Your model finds this.":""}</li>`).join("")}</ul>`:"")+src;
       return head+`<h3 class="ph">Variables</h3>${varTable(V)}<h3 class="ph">Your assumptions</h3><ul class="plist">${p.assumptions.filter((a,i)=>as.includes("a"+i)).map(a=>`<li>${esc(a.t)}</li>`).join("")||"<li class=muted>None picked yet.</li>"}</ul>${src}`}};
   const ASM=p.assumptions.map((a,i)=>({k:"a"+i,t:a.t,ok:a.ok,sug:a.sug,why:a.why||"That isn't something this model assumes."}));
   const asMin=Math.min(2,ASM.filter(a=>a.ok).length||0);

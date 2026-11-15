@@ -1,4 +1,5 @@
 const ROOT=require('path').resolve(__dirname,'..');
+const assert=require('node:assert/strict');
 module.exports=async(p,H)=>{
   await p.addInitScript({path:ROOT+'/tests/mockclaude.js'});
   // read uploads with the copies npm installed (falls back to the CDN when they're missing)
@@ -31,6 +32,22 @@ module.exports=async(p,H)=>{
   console.log('from file:',await p.inputValue('[data-f="p.title"]'),'| src:',(await p.textContent('.edsrc')).replace(/\s+/g,' ').trim());
   console.log('AI saw file text:',await p.evaluate(()=>(window.__aiCalls||[]).slice(-1)[0]));
   await p.click('#ed-save'); await p.waitForTimeout(300);
+  await p.click('#ed-prev');
+  await p.locator('.icard h1').waitFor();
+  assert.equal(await p.locator('.icard h1').innerText(),'Lemonade stand profit');
+  assert.equal(await p.locator('.icard .top p').innerText(),'Maya runs a lemonade stand at the school fair. How many cups must she sell to break even?');
+  await p.locator('.icard [data-prob]').click();
+  const info=p.getByRole('dialog');
+  assert.deepEqual(await info.locator('.imported-facts dd').allTextContents(),['$15','$0.40','$1.50']);
+  assert.deepEqual(await info.locator('.problem-copy strong').allTextContents(),['$15','$0.40','$1.50']);
+  assert.equal(await info.locator('.ptext').innerText(),'How many cups must she sell to break even?');
+  await info.getByRole('button',{name:'Back to Understand'}).click();
+  await p.click('#go1');
+  await p.click('.def-left [data-prob]');
+  assert.equal(await info.getByRole('heading',{name:"What you'll define"}).count(),1);
+  assert.equal(await info.locator('.imported-facts .pcard').count(),3);
+  await info.getByRole('button',{name:'Back to Define'}).click();
+  assert.equal(await info.count(),0);
   await p.goto('file://'+ROOT+'/index.html#workspace'); await p.waitForTimeout(500); console.log('workspace list:',await p.$$eval('.prow b',b=>b.map(x=>x.textContent).join(' / ')));
   await H.shot('tm_ws_list',true);
   // ---- a student arrives

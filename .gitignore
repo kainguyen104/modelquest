@@ -1,5 +1,10 @@
 node_modules/
+dist/
+.vercel/
 shots/*
 !shots/.gitkeep
 .DS_Store
 __pycache__/
+.env
+.env.*
+!.env.example
